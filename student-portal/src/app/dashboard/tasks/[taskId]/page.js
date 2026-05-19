@@ -8,11 +8,21 @@ import { getBootcamp, subscribeToTutorials, subscribeToSubtasks, createSubmissio
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import Editor from '@monaco-editor/react';
-import ReactPlayer from 'react-player';
 import SocietyBackground from '@/components/backgrounds/SocietyBackground';
 import GlassCard from '@/components/ui/GlassCard';
 import Modal from '@/components/ui/Modal';
 import styles from './page.module.css';
+
+// HELPER: Intercepts standard YouTube links and forces them into embeddable iframes
+const getYouTubeEmbedUrl = (url) => {
+  if (!url) return null;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = url.match(regExp);
+  if (match && match[2].length === 11) {
+    return `https://www.youtube.com/embed/${match[2]}`;
+  }
+  return url;
+};
 
 export default function StudentTaskDetailPage() {
   const { taskId } = useParams();
@@ -82,7 +92,6 @@ export default function StudentTaskDetailPage() {
 
     setSubmitting(true);
     try {
-      // FIXED: Added points field to final task payload
       const subId = await createSubmission(user.bootcampId, {
         taskId,
         studentId: user.uid,
@@ -125,7 +134,6 @@ export default function StudentTaskDetailPage() {
 
     setSubmittingSubtask(true);
     try {
-      // FIXED: Added points field to subtask payload
       const subId = await createSubmission(user.bootcampId, {
         taskId,
         studentId: user.uid,
@@ -241,24 +249,44 @@ export default function StudentTaskDetailPage() {
                               c.value.includes('youtube.com') ||
                               c.value.includes('youtu.be') ||
                               c.value.includes('vimeo.com') ||
-                              c.value.match(/\.(mp4|webm|ogg)$/)
+                              c.value.match(/\.(mp4|webm|ogg)$/i)
                             );
 
                             const isVideo = (c.type === 'video' || c.type === 'youtube' || isVideoURL) && c.value;
                             const isLink = c.type === 'link' && !isVideo;
+                            const embedUrl = isVideo ? getYouTubeEmbedUrl(c.value) : null;
 
                             return (
                               <div key={j} className={styles.tutContent}>
                                 {isVideo && isMounted ? (
-                                  <div className={styles.videoWrapper}>
-                                    <ReactPlayer
-                                      url={c.value}
-                                      className={styles.reactPlayer}
-                                      width="100%"
-                                      height="100%"
-                                      controls={true}
-                                      light={c.value.includes('youtube.com') || c.value.includes('youtu.be')}
-                                    />
+                                  <div
+                                    className={styles.videoWrapper}
+                                    style={{
+                                      position: 'relative',
+                                      paddingBottom: '56.25%', // Mathematically forces a 16:9 Aspect Ratio
+                                      height: 0,
+                                      overflow: 'hidden',
+                                      borderRadius: '8px',
+                                      backgroundColor: '#000',
+                                      marginBottom: '16px',
+                                      boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                                    }}
+                                  >
+                                    {c.value.match(/\.(mp4|webm|ogg)$/i) ? (
+                                      <video
+                                        controls
+                                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', borderRadius: '8px' }}
+                                        src={c.value}
+                                      />
+                                    ) : (
+                                      <iframe
+                                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0, borderRadius: '8px' }}
+                                        src={embedUrl}
+                                        title="Tutorial Video"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                        allowFullScreen
+                                      />
+                                    )}
                                   </div>
                                 ) : isLink ? (
                                   <div className={styles.linkWrapper}>
@@ -295,7 +323,7 @@ export default function StudentTaskDetailPage() {
 
                                         {subSubmission ? (
                                           <span className={`badge ${subSubmission.status === 'approved' ? 'badge-success' :
-                                              subSubmission.status === 'rejected' ? 'badge-danger' : 'badge-warning'
+                                            subSubmission.status === 'rejected' ? 'badge-danger' : 'badge-warning'
                                             }`}>
                                             {subSubmission.status.charAt(0).toUpperCase() + subSubmission.status.slice(1)}
                                           </span>

@@ -28,7 +28,8 @@ export default function SubmissionsPage() {
   const [students, setStudents] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [filter, setFilter] = useState('pending');
-  const [processingId, setProcessingId] = useState(null); // ADDED: Prevents multi-clicks
+  const [processingId, setProcessingId] = useState(null);
+  const [expandedStudentId, setExpandedStudentId] = useState(null);
 
   useEffect(() => {
     const loadBc = async () => {
@@ -72,7 +73,7 @@ export default function SubmissionsPage() {
   };
 
   const handleStatusUpdate = async (sub, newStatus) => {
-    if (processingId) return; // Ignore if already processing an update
+    if (processingId) return;
     setProcessingId(sub.id);
 
     try {
@@ -97,6 +98,20 @@ export default function SubmissionsPage() {
   const filteredSubs = filter === 'all'
     ? submissions
     : submissions.filter(s => s.status === filter);
+
+  // Group filtered submissions by student
+  const groupedSubmissions = Object.values(filteredSubs.reduce((acc, sub) => {
+    if (!acc[sub.studentId]) {
+      acc[sub.studentId] = {
+        studentId: sub.studentId,
+        studentName: getStudentName(sub.studentId),
+        initial: getStudentInitial(sub.studentId),
+        items: []
+      };
+    }
+    acc[sub.studentId].items.push(sub);
+    return acc;
+  }, {}));
 
   return (
     <div className={styles.container}>
@@ -128,8 +143,8 @@ export default function SubmissionsPage() {
         ))}
       </div>
 
-      <div className={styles.grid}>
-        {filteredSubs.length === 0 ? (
+      <div className={styles.grid} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {groupedSubmissions.length === 0 ? (
           <GlassCard hover={false} padding="xl">
             <div className="empty-state">
               <span className="empty-state-icon">
@@ -140,84 +155,96 @@ export default function SubmissionsPage() {
             </div>
           </GlassCard>
         ) : (
-          filteredSubs.map((sub, i) => (
+          groupedSubmissions.map((group, i) => (
             <motion.div
-              key={sub.id}
+              key={group.studentId}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
             >
-              <GlassCard padding="lg">
-                <div className={styles.subCard}>
-                  <div className={styles.subHeader}>
-                    <div className={styles.subMeta}>
-                      <div className={styles.studentAvatar}>
-                        {getStudentInitial(sub.studentId)}
-                      </div>
-                      <div>
-                        <h3 className={styles.subStudent}>
-                          <UserIcon />
-                          <span>{getStudentName(sub.studentId)}</span>
-                        </h3>
-                        <p className={styles.subTask}>
-                          {sub.subtaskId ? <SubtaskIcon /> : <TaskIcon />}
-                          <span>{sub.subtaskId ? `Subtask: ${sub.subtaskTitle || sub.subtaskId}` : getTaskName(sub.taskId)}</span>
-                        </p>
-                      </div>
-                    </div>
-                    <span className={`badge ${sub.status === 'approved' ? 'badge-success' :
-                        sub.status === 'rejected' ? 'badge-danger' : 'badge-warning'
-                      }`}>
-                      {sub.status}
-                    </span>
+              <GlassCard padding="none">
+                {/* Accordion Header */}
+                <div
+                  onClick={() => setExpandedStudentId(prev => prev === group.studentId ? null : group.studentId)}
+                  style={{ padding: '20px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div className={styles.studentAvatar}>{group.initial}</div>
+                    <h3 style={{ margin: 0, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <UserIcon /> {group.studentName}
+                    </h3>
                   </div>
-
-                  <div className={styles.subContent}>
-                    <p className={styles.subTypeLabel}>Submission ({sub.type}):</p>
-                    {['link', 'video', 'image'].includes(sub.type) ? (
-                      <a href={sub.content} target="_blank" rel="noreferrer" className={styles.subLink}>
-                        <LinkIcon />
-                        <span>View Submission ↗</span>
-                      </a>
-                    ) : sub.type === 'code' ? (
-                      <pre className={styles.codeBlock}>
-                        <code>{sub.content}</code>
-                      </pre>
-                    ) : (
-                      <p className={styles.subText}>{Array.isArray(sub.content) ? sub.content.join(', ') : sub.content}</p>
-                    )}
-                  </div>
-
-                  <div className={styles.subFooter}>
-                    <span className={styles.subDate}>
-                      <ClockIcon />
-                      <span>{sub.submittedAt?.toDate?.()?.toLocaleDateString() || 'N/A'}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <span style={{ fontSize: '0.9rem', opacity: 0.7 }}>
+                      {group.items.length} Submissions
                     </span>
-
-                    {sub.status === 'pending' && (
-                      <div className={styles.actions}>
-                        <button
-                          className={styles.rejectBtn}
-                          onClick={() => handleStatusUpdate(sub, 'rejected')}
-                          disabled={processingId === sub.id}
-                        >
-                          <XIcon />
-                          <span>Reject</span>
-                        </button>
-                        <button
-                          className={styles.approveBtn}
-                          onClick={() => handleStatusUpdate(sub, 'approved')}
-                          disabled={processingId === sub.id}
-                        >
-                          <CheckIcon />
-                          <span>
-                            {processingId === sub.id ? 'Processing...' : `Approve (+${sub.points !== undefined ? sub.points : (taskMap[sub.taskId]?.points || 10)} pts)`}
-                          </span>
-                        </button>
-                      </div>
-                    )}
+                    <span style={{ transform: expandedStudentId === group.studentId ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}>
+                      ▼
+                    </span>
                   </div>
                 </div>
+
+                {/* Accordion Body */}
+                {expandedStudentId === group.studentId && (
+                  <div style={{ padding: '0 20px 20px 20px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                    {group.items.map(sub => (
+                      <div key={sub.id} style={{ padding: '16px', background: 'rgba(0,0,0,0.15)', borderRadius: '8px', marginTop: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                          <div>
+                            <p style={{ margin: '0 0 4px 0', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              {sub.subtaskId ? <SubtaskIcon /> : <TaskIcon />}
+                              {sub.subtaskId ? `Subtask: ${sub.subtaskTitle || sub.subtaskId}` : getTaskName(sub.taskId)}
+                            </p>
+                            <span style={{ fontSize: '0.8rem', opacity: 0.6, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <ClockIcon /> {sub.submittedAt?.toDate?.()?.toLocaleDateString() || 'N/A'}
+                            </span>
+                          </div>
+                          <span className={`badge ${sub.status === 'approved' ? 'badge-success' : sub.status === 'rejected' ? 'badge-danger' : 'badge-warning'}`}>
+                            {sub.status}
+                          </span>
+                        </div>
+
+                        <div style={{ padding: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '6px', fontSize: '0.9rem' }}>
+                          {['link', 'video', 'image'].includes(sub.type) ? (
+                            <a href={sub.content} target="_blank" rel="noreferrer" className={styles.subLink}>
+                              <LinkIcon />
+                              <span>View Submission ↗</span>
+                            </a>
+                          ) : sub.type === 'code' ? (
+                            <pre className={styles.codeBlock}>
+                              <code>{sub.content}</code>
+                            </pre>
+                          ) : (
+                            <p className={styles.subText}>{Array.isArray(sub.content) ? sub.content.join(', ') : sub.content}</p>
+                          )}
+                        </div>
+
+                        {sub.status === 'pending' && (
+                          <div style={{ display: 'flex', gap: '12px', marginTop: '16px', justifyContent: 'flex-end' }}>
+                            <button
+                              className={styles.rejectBtn}
+                              onClick={() => handleStatusUpdate(sub, 'rejected')}
+                              disabled={processingId === sub.id}
+                            >
+                              <XIcon />
+                              <span>Reject</span>
+                            </button>
+                            <button
+                              className={styles.approveBtn}
+                              onClick={() => handleStatusUpdate(sub, 'approved')}
+                              disabled={processingId === sub.id}
+                            >
+                              <CheckIcon />
+                              <span>
+                                {processingId === sub.id ? 'Processing...' : `Approve (+${sub.points !== undefined ? sub.points : (taskMap[sub.taskId]?.points || 10)} pts)`}
+                              </span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </GlassCard>
             </motion.div>
           ))
