@@ -1,0 +1,387 @@
+/**
+ * Firestore Database Helpers
+ * All CRUD operations for bootcamps, tasks, tutorials, users, submissions, etc.
+ */
+
+import {
+  collection,
+  doc,
+  addDoc,
+  setDoc,
+  getDoc,
+  getDocs,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
+  onSnapshot,
+  serverTimestamp,
+  writeBatch,
+  increment,
+} from 'firebase/firestore';
+import { db } from './firebase';
+
+// ==================== BOOTCAMPS ====================
+
+export async function createBootcamp(data) {
+  const docRef = await addDoc(collection(db, 'bootcamps'), {
+    ...data,
+    status: 'active',
+    createdAt: serverTimestamp(),
+  });
+  return docRef.id;
+}
+
+export async function getBootcamp(bootcampId) {
+  const docSnap = await getDoc(doc(db, 'bootcamps', bootcampId));
+  if (!docSnap.exists()) return null;
+  return { id: docSnap.id, ...docSnap.data() };
+}
+
+export async function getAllBootcamps() {
+  const snap = await getDocs(query(collection(db, 'bootcamps'), orderBy('createdAt', 'desc')));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+export async function updateBootcamp(bootcampId, data) {
+  await updateDoc(doc(db, 'bootcamps', bootcampId), { ...data, updatedAt: serverTimestamp() });
+}
+
+export async function deleteBootcamp(bootcampId) {
+  await deleteDoc(doc(db, 'bootcamps', bootcampId));
+}
+
+export function subscribeToBootcamps(callback) {
+  return onSnapshot(
+    query(collection(db, 'bootcamps'), orderBy('createdAt', 'desc')),
+    (snap) => callback(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+  );
+}
+
+// ==================== VOLUNTEERS ====================
+
+export async function addVolunteer(bootcampId, data) {
+  const docRef = await addDoc(collection(db, 'bootcamps', bootcampId, 'volunteers'), {
+    ...data,
+    createdAt: serverTimestamp(),
+  });
+  return docRef.id;
+}
+
+export async function getVolunteers(bootcampId) {
+  const snap = await getDocs(
+    query(collection(db, 'bootcamps', bootcampId, 'volunteers'), orderBy('createdAt', 'desc'))
+  );
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+export function subscribeToVolunteers(bootcampId, callback) {
+  return onSnapshot(
+    query(collection(db, 'bootcamps', bootcampId, 'volunteers'), orderBy('createdAt', 'desc')),
+    (snap) => callback(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+  );
+}
+
+export async function deleteVolunteer(bootcampId, volunteerId) {
+  await deleteDoc(doc(db, 'bootcamps', bootcampId, 'volunteers', volunteerId));
+}
+
+// ==================== STUDENTS ====================
+
+export async function addStudent(bootcampId, data) {
+  const docRef = await addDoc(collection(db, 'bootcamps', bootcampId, 'students'), {
+    ...data,
+    totalPoints: 0,
+    createdAt: serverTimestamp(),
+  });
+  return docRef.id;
+}
+
+export async function getStudents(bootcampId) {
+  const snap = await getDocs(
+    query(collection(db, 'bootcamps', bootcampId, 'students'), orderBy('createdAt', 'desc'))
+  );
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+export async function getStudentsByVolunteer(bootcampId, volunteerId) {
+  const snap = await getDocs(
+    query(
+      collection(db, 'bootcamps', bootcampId, 'students'),
+      where('volunteerId', '==', volunteerId),
+      orderBy('createdAt', 'desc')
+    )
+  );
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+export function subscribeToStudents(bootcampId, callback) {
+  return onSnapshot(
+    query(collection(db, 'bootcamps', bootcampId, 'students'), orderBy('createdAt', 'desc')),
+    (snap) => callback(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+  );
+}
+
+export async function updateStudent(bootcampId, studentId, data) {
+  await updateDoc(doc(db, 'bootcamps', bootcampId, 'students', studentId), data);
+}
+
+export async function deleteStudent(bootcampId, studentId) {
+  await deleteDoc(doc(db, 'bootcamps', bootcampId, 'students', studentId));
+}
+
+// ==================== TEAMS ====================
+
+export async function createTeam(bootcampId, data) {
+  const docRef = await addDoc(collection(db, 'bootcamps', bootcampId, 'teams'), {
+    ...data,
+    totalPoints: 0,
+    createdAt: serverTimestamp(),
+  });
+  return docRef.id;
+}
+
+export async function getTeams(bootcampId) {
+  const snap = await getDocs(
+    query(collection(db, 'bootcamps', bootcampId, 'teams'), orderBy('name'))
+  );
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+export function subscribeToTeams(bootcampId, callback) {
+  return onSnapshot(
+    query(collection(db, 'bootcamps', bootcampId, 'teams'), orderBy('totalPoints', 'desc')),
+    (snap) => callback(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+  );
+}
+
+// ==================== TASKS (Core) ====================
+
+export async function createTask(bootcampId, data) {
+  const docRef = await addDoc(collection(db, 'bootcamps', bootcampId, 'tasks'), {
+    ...data,
+    type: 'core',
+    status: 'active',
+    createdAt: serverTimestamp(),
+  });
+  return docRef.id;
+}
+
+export async function getTasks(bootcampId) {
+  const snap = await getDocs(
+    query(
+      collection(db, 'bootcamps', bootcampId, 'tasks'),
+      where('status', '==', 'active'),
+      orderBy('createdAt', 'desc')
+    )
+  );
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+export function subscribeToTasks(bootcampId, callback) {
+  return onSnapshot(
+    query(
+      collection(db, 'bootcamps', bootcampId, 'tasks'),
+      orderBy('createdAt', 'desc')
+    ),
+    (snap) => callback(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+  );
+}
+
+export async function updateTask(bootcampId, taskId, data) {
+  await updateDoc(doc(db, 'bootcamps', bootcampId, 'tasks', taskId), {
+    ...data,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+// FIXED: Now properly deletes the document from Firestore instead of setting status to 'archived'
+export async function deleteTask(bootcampId, taskId) {
+  await deleteDoc(doc(db, 'bootcamps', bootcampId, 'tasks', taskId));
+}
+
+// ==================== TUTORIALS (Child of Task) ====================
+
+export async function createTutorial(bootcampId, taskId, data) {
+  const docRef = await addDoc(
+    collection(db, 'bootcamps', bootcampId, 'tasks', taskId, 'tutorials'),
+    { ...data, createdAt: serverTimestamp() }
+  );
+  return docRef.id;
+}
+
+export async function getTutorials(bootcampId, taskId) {
+  const snap = await getDocs(
+    query(
+      collection(db, 'bootcamps', bootcampId, 'tasks', taskId, 'tutorials'),
+      orderBy('order', 'asc')
+    )
+  );
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+export function subscribeToTutorials(bootcampId, taskId, callback) {
+  return onSnapshot(
+    query(
+      collection(db, 'bootcamps', bootcampId, 'tasks', taskId, 'tutorials'),
+      orderBy('order', 'asc')
+    ),
+    (snap) => callback(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+  );
+}
+
+export async function updateTutorial(bootcampId, taskId, tutorialId, data) {
+  await updateDoc(
+    doc(db, 'bootcamps', bootcampId, 'tasks', taskId, 'tutorials', tutorialId),
+    data
+  );
+}
+
+export async function deleteTutorial(bootcampId, taskId, tutorialId) {
+  await deleteDoc(
+    doc(db, 'bootcamps', bootcampId, 'tasks', taskId, 'tutorials', tutorialId)
+  );
+}
+
+// ==================== SUBTASKS (Child of Task, linked to Tutorial) ====================
+
+export async function createSubtask(bootcampId, taskId, data) {
+  const docRef = await addDoc(
+    collection(db, 'bootcamps', bootcampId, 'tasks', taskId, 'subtasks'),
+    { ...data, createdAt: serverTimestamp() }
+  );
+  return docRef.id;
+}
+
+export async function getSubtasks(bootcampId, taskId) {
+  const snap = await getDocs(
+    query(
+      collection(db, 'bootcamps', bootcampId, 'tasks', taskId, 'subtasks'),
+      orderBy('order', 'asc')
+    )
+  );
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+export function subscribeToSubtasks(bootcampId, taskId, callback) {
+  return onSnapshot(
+    query(
+      collection(db, 'bootcamps', bootcampId, 'tasks', taskId, 'subtasks'),
+      orderBy('order', 'asc')
+    ),
+    (snap) => callback(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+  );
+}
+
+export async function updateSubtask(bootcampId, taskId, subtaskId, data) {
+  await updateDoc(
+    doc(db, 'bootcamps', bootcampId, 'tasks', taskId, 'subtasks', subtaskId),
+    data
+  );
+}
+
+export async function deleteSubtask(bootcampId, taskId, subtaskId) {
+  await deleteDoc(
+    doc(db, 'bootcamps', bootcampId, 'tasks', taskId, 'subtasks', subtaskId)
+  );
+}
+
+// ==================== SUBMISSIONS ====================
+
+export async function createSubmission(bootcampId, data) {
+  const docRef = await addDoc(collection(db, 'bootcamps', bootcampId, 'submissions'), {
+    ...data,
+    status: 'pending',
+    pointsAwarded: 0,
+    submittedAt: serverTimestamp(),
+  });
+  return docRef.id;
+}
+
+export async function getSubmissions(bootcampId, filters = {}) {
+  let q = collection(db, 'bootcamps', bootcampId, 'submissions');
+  const constraints = [orderBy('submittedAt', 'desc')];
+
+  if (filters.taskId) constraints.unshift(where('taskId', '==', filters.taskId));
+  if (filters.studentId) constraints.unshift(where('studentId', '==', filters.studentId));
+  if (filters.status) constraints.unshift(where('status', '==', filters.status));
+
+  const snap = await getDocs(query(q, ...constraints));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+export function subscribeToSubmissions(bootcampId, callback, filters = {}) {
+  let constraints = [orderBy('submittedAt', 'desc')];
+
+  if (filters.taskId) constraints.unshift(where('taskId', '==', filters.taskId));
+  if (filters.studentId) constraints.unshift(where('studentId', '==', filters.studentId));
+  if (filters.status) constraints.unshift(where('status', '==', filters.status));
+
+  return onSnapshot(
+    query(collection(db, 'bootcamps', bootcampId, 'submissions'), ...constraints),
+    (snap) => callback(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+  );
+}
+// Locate the reviewSubmission function in src/lib/db.js and replace it with this version:
+
+export async function reviewSubmission(bootcampId, submissionId, reviewData) {
+  const submissionRef = doc(db, 'bootcamps', bootcampId, 'submissions', submissionId);
+  const submissionDoc = await getDoc(submissionRef);
+
+  if (!submissionDoc.exists()) return;
+  const submission = submissionDoc.data();
+
+  // CRITICAL GUARD: If this submission has already been approved, 
+  // exit immediately to prevent points from being added multiple times.
+  if (submission.status === 'approved') {
+    return;
+  }
+
+  const batch = writeBatch(db);
+
+  // Update submission
+  batch.update(submissionRef, {
+    ...reviewData,
+    reviewedAt: serverTimestamp(),
+  });
+
+  // If approved with points, update student's total
+  if (reviewData.status === 'approved' && reviewData.pointsAwarded > 0) {
+    const studentRef = doc(db, 'bootcamps', bootcampId, 'students', submission.studentId);
+    batch.update(studentRef, {
+      totalPoints: increment(reviewData.pointsAwarded),
+    });
+
+    // Update leaderboard entry
+    const leaderboardRef = doc(db, 'bootcamps', bootcampId, 'leaderboard', submission.studentId);
+    const lbDoc = await getDoc(leaderboardRef);
+    if (lbDoc.exists()) {
+      batch.update(leaderboardRef, {
+        totalPoints: increment(reviewData.pointsAwarded),
+        lastUpdated: serverTimestamp(),
+      });
+    }
+  }
+
+  await batch.commit();
+}
+// ==================== LEADERBOARD ====================
+
+export function subscribeToLeaderboard(bootcampId, callback) {
+  return onSnapshot(
+    query(
+      collection(db, 'bootcamps', bootcampId, 'leaderboard'),
+      orderBy('totalPoints', 'desc')
+    ),
+    (snap) => callback(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+  );
+}
+
+export async function initLeaderboardEntry(bootcampId, entityId, data) {
+  await setDoc(doc(db, 'bootcamps', bootcampId, 'leaderboard', entityId), {
+    ...data,
+    totalPoints: 0,
+    lastUpdated: serverTimestamp(),
+  });
+}

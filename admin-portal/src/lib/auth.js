@@ -1,0 +1,81 @@
+/**
+ * Authentication Helpers
+ * Handles login, signup, role verification, and session management.
+ */
+
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+} from 'firebase/auth';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, db } from './firebase';
+
+/**
+ * Sign in with email and password
+ */
+export async function loginUser(email, password) {
+  const userCredential = await signInWithEmailAndPassword(auth, email, password);
+  const userData = await getUserProfile(userCredential.user.uid);
+  return { ...userCredential.user, ...userData };
+}
+
+/**
+ * Sign out current user
+ */
+export async function logoutUser() {
+  await signOut(auth);
+}
+
+/**
+ * Get user profile from Firestore
+ */
+export async function getUserProfile(uid) {
+  const userDoc = await getDoc(doc(db, 'users', uid));
+  if (!userDoc.exists()) return null;
+  return { id: userDoc.id, ...userDoc.data() };
+}
+
+/**
+ * Create a new user account (used by admin/volunteer to create accounts)
+ * Note: This creates both Firebase Auth account and Firestore profile.
+ * For creating users without signing out the current admin, we use the 
+ * Firebase Admin SDK approach via API route.
+ */
+export async function createUserProfile(uid, data) {
+  await setDoc(doc(db, 'users', uid), {
+    ...data,
+    createdAt: serverTimestamp(),
+  });
+}
+
+/**
+ * Listen to auth state changes
+ */
+export function onAuthChange(callback) {
+  return onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      try {
+        const userData = await getUserProfile(user.uid);
+        callback({ ...user, ...userData });
+      } catch (err) {
+        console.error('Failed to get user profile:', err);
+        callback({ ...user, role: 'unknown', error: 'permissions-denied' });
+      }
+    } else {
+      callback(null);
+    }
+  });
+}
+
+/**
+ * Check if user has required role
+ */
+export function hasRole(user, requiredRole) {
+  if (!user) return false;
+  if (requiredRole === 'admin') return user.role === 'admin';
+  if (requiredRole === 'volunteer') return user.role === 'volunteer' || user.role === 'admin';
+  if (requiredRole === 'student') return user.role === 'student';
+  return false;
+}

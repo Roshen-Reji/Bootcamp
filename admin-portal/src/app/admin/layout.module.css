@@ -1,0 +1,27 @@
+.layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.main {
+  flex: 1;
+  margin-left: var(--sidebar-collapsed);
+  padding: var(--space-lg);
+  transition: margin-left var(--transition-base);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+@media (min-width: 1024px) {
+  .main {
+    margin-left: var(--sidebar-width);
+  }
+}
+
+@media (max-width: 768px) {
+  .main {
+    margin-left: 0;
+    padding: var(--space-md);
+    padding-bottom: 80px; /* space for mobile bottom nav */
+  }
+}
