@@ -5,11 +5,10 @@
 
 import {
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from './firebase';
 
 /**
@@ -47,6 +46,13 @@ export async function createUserProfile(uid, data) {
   await setDoc(doc(db, 'users', uid), {
     ...data,
     createdAt: serverTimestamp(),
+  });
+}
+
+export async function updateUserProfile(uid, data) {
+  await updateDoc(doc(db, 'users', uid), {
+    ...data,
+    updatedAt: serverTimestamp(),
   });
 }
 

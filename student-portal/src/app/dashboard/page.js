@@ -7,10 +7,10 @@ import { useAuth } from '@/context/AuthContext';
 import { getBootcamp, subscribeToTasks, subscribeToSubmissions, subscribeToStudent } from '@/lib/db';
 import SocietyBackground from '@/components/backgrounds/SocietyBackground';
 import GlassCard from '@/components/ui/GlassCard';
+import { getSocieties } from '@/shared/societies';
 import styles from './page.module.css';
 
 export default function StudentDashboard() {
-  // Added refreshUser to update the sidebar globally
   const { user, refreshUser } = useAuth();
   const router = useRouter();
 
@@ -39,8 +39,6 @@ export default function StudentDashboard() {
     const unsubStudent = subscribeToStudent(user.bootcampId, user.uid, (profile) => {
       setStudentProfile(profile);
 
-      // MAGIC TRICK: If the real-time profile level is different from the cached user level,
-      // refresh the global Auth Context so the Sidebar at the bottom instantly updates!
       if (profile?.level && user?.level && profile.level !== user.level) {
         refreshUser();
       }
@@ -54,6 +52,7 @@ export default function StudentDashboard() {
   }, [user, refreshUser]);
 
   if (!bootcamp) return null;
+  const societies = getSocieties(bootcamp.society);
 
   // Calculate stats
   const completedTaskIds = submissions
@@ -79,6 +78,15 @@ export default function StudentDashboard() {
         <div>
           <h1 className={styles.title}>Hello, {user?.displayName}</h1>
           <p className={styles.subtitle}>Welcome to {bootcamp.name}</p>
+          {societies.length > 0 && (
+            <div className={styles.societyChips} aria-label="Bootcamp societies">
+              {societies.map((society) => (
+                <span key={society.id} className={styles.societyChip}>
+                  {society.shortName}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
         {/* Removed the top Level badge from here as requested */}
       </div>

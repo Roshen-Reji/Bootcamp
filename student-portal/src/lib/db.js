@@ -18,7 +18,6 @@ import {
   onSnapshot,
   serverTimestamp,
   writeBatch,
-  limit,
   increment,
 } from 'firebase/firestore';
 import { db } from './firebase';
@@ -143,6 +142,27 @@ export async function updateStudent(bootcampId, studentId, data) {
 
 export async function deleteStudent(bootcampId, studentId) {
   await deleteDoc(doc(db, 'bootcamps', bootcampId, 'students', studentId));
+}
+
+export async function updateOwnBootcampProfile(bootcampId, uid, role, data) {
+  const batch = writeBatch(db);
+
+  if (role === 'student') {
+    batch.set(doc(db, 'bootcamps', bootcampId, 'students', uid), data, { merge: true });
+    if (data.displayName) {
+      batch.set(
+        doc(db, 'bootcamps', bootcampId, 'leaderboard', uid),
+        { displayName: data.displayName, lastUpdated: serverTimestamp() },
+        { merge: true }
+      );
+    }
+  }
+
+  if (role === 'volunteer') {
+    batch.set(doc(db, 'bootcamps', bootcampId, 'volunteers', uid), data, { merge: true });
+  }
+
+  await batch.commit();
 }
 
 // ==================== TEAMS ====================
@@ -350,20 +370,23 @@ export function subscribeToSubmissions(bootcampId, callback, filters = {}) {
 }
 
 export async function reviewSubmission(bootcampId, submissionId, reviewData) {
+  const submissionRef = doc(db, 'bootcamps', bootcampId, 'submissions', submissionId);
+  const submissionDoc = await getDoc(submissionRef);
+
+  if (!submissionDoc.exists()) return;
+  const submission = submissionDoc.data();
+  const wasApproved = submission.status === 'approved';
+  const isApproving = reviewData.status === 'approved';
+  const shouldAwardPoints = isApproving && !wasApproved && (reviewData.pointsAwarded || 0) > 0;
+
   const batch = writeBatch(db);
 
-  // Update submission
-  const submissionRef = doc(db, 'bootcamps', bootcampId, 'submissions', submissionId);
   batch.update(submissionRef, {
     ...reviewData,
     reviewedAt: serverTimestamp(),
   });
 
-  // If approved with points, update student's total
-  if (reviewData.status === 'approved' && reviewData.pointsAwarded > 0) {
-    const submissionDoc = await getDoc(submissionRef);
-    const submission = submissionDoc.data();
-
+  if (shouldAwardPoints) {
     const studentRef = doc(db, 'bootcamps', bootcampId, 'students', submission.studentId);
     batch.update(studentRef, {
       totalPoints: increment(reviewData.pointsAwarded),

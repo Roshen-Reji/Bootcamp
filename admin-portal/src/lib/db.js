@@ -124,11 +124,40 @@ export function subscribeToStudents(bootcampId, callback) {
 }
 
 export async function updateStudent(bootcampId, studentId, data) {
-  await updateDoc(doc(db, 'bootcamps', bootcampId, 'students', studentId), data);
+  const batch = writeBatch(db);
+
+  batch.update(doc(db, 'bootcamps', bootcampId, 'students', studentId), data);
+
+  if (data.level) {
+    batch.update(doc(db, 'users', studentId), { level: data.level });
+  }
+
+  await batch.commit();
 }
 
 export async function deleteStudent(bootcampId, studentId) {
   await deleteDoc(doc(db, 'bootcamps', bootcampId, 'students', studentId));
+}
+
+export async function updateOwnBootcampProfile(bootcampId, uid, role, data) {
+  const batch = writeBatch(db);
+
+  if (role === 'student') {
+    batch.set(doc(db, 'bootcamps', bootcampId, 'students', uid), data, { merge: true });
+    if (data.displayName) {
+      batch.set(
+        doc(db, 'bootcamps', bootcampId, 'leaderboard', uid),
+        { displayName: data.displayName, lastUpdated: serverTimestamp() },
+        { merge: true }
+      );
+    }
+  }
+
+  if (role === 'volunteer') {
+    batch.set(doc(db, 'bootcamps', bootcampId, 'volunteers', uid), data, { merge: true });
+  }
+
+  await batch.commit();
 }
 
 // ==================== TEAMS ====================
@@ -323,7 +352,6 @@ export function subscribeToSubmissions(bootcampId, callback, filters = {}) {
     (snap) => callback(snap.docs.map(d => ({ id: d.id, ...d.data() })))
   );
 }
-// Locate the reviewSubmission function in src/lib/db.js and replace it with this version:
 
 export async function reviewSubmission(bootcampId, submissionId, reviewData) {
   const submissionRef = doc(db, 'bootcamps', bootcampId, 'submissions', submissionId);
@@ -331,23 +359,18 @@ export async function reviewSubmission(bootcampId, submissionId, reviewData) {
 
   if (!submissionDoc.exists()) return;
   const submission = submissionDoc.data();
-
-  // CRITICAL GUARD: If this submission has already been approved, 
-  // exit immediately to prevent points from being added multiple times.
-  if (submission.status === 'approved') {
-    return;
-  }
+  const wasApproved = submission.status === 'approved';
+  const isApproving = reviewData.status === 'approved';
+  const shouldAwardPoints = isApproving && !wasApproved && (reviewData.pointsAwarded || 0) > 0;
 
   const batch = writeBatch(db);
 
-  // Update submission
   batch.update(submissionRef, {
     ...reviewData,
     reviewedAt: serverTimestamp(),
   });
 
-  // If approved with points, update student's total
-  if (reviewData.status === 'approved' && reviewData.pointsAwarded > 0) {
+  if (shouldAwardPoints) {
     const studentRef = doc(db, 'bootcamps', bootcampId, 'students', submission.studentId);
     batch.update(studentRef, {
       totalPoints: increment(reviewData.pointsAwarded),

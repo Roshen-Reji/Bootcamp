@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
-// ADDED: Imported subscribeToStudent
 import { getBootcamp, subscribeToTasks, subscribeToSubmissions, subscribeToStudent } from '@/lib/db';
 import SocietyBackground from '@/components/backgrounds/SocietyBackground';
 import GlassCard from '@/components/ui/GlassCard';
@@ -17,7 +16,7 @@ export default function StudentTasksPage() {
   const [bootcamp, setBootcamp] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [submissions, setSubmissions] = useState([]);
-  const [studentProfile, setStudentProfile] = useState(null); // ADDED: State for real-time profile
+  const [studentProfile, setStudentProfile] = useState(null);
   const [filter, setFilter] = useState('all');
 
   useEffect(() => {
@@ -34,7 +33,6 @@ export default function StudentTasksPage() {
       setSubmissions(allSubs.filter(s => s.studentId === user.uid));
     });
 
-    // ADDED: Listen to the student's specific document in real-time
     const unsubStudent = subscribeToStudent(user.bootcampId, user.uid, setStudentProfile);
 
     return () => {
@@ -56,10 +54,8 @@ export default function StudentTasksPage() {
     return { ...task, userStatus: status };
   });
 
-  // ADDED: Determine current level dynamically from real-time profile, fallback to session user level
   const currentLevel = studentProfile?.level || user?.level || 'beginner';
 
-  // CHANGED: Strict filtering based on the real-time current level
   const availableTasks = taskStatuses.filter(t => t.level === currentLevel);
 
   const filteredTasks = filter === 'all'
@@ -107,7 +103,7 @@ export default function StudentTasksPage() {
             <div className="empty-state">
               <span className="empty-state-icon">📋</span>
               <h3>No tasks found</h3>
-              <p className="empty-state-text">You don't have any tasks in this category.</p>
+              <p className="empty-state-text">You do not have any tasks in this category.</p>
             </div>
           </GlassCard>
         ) : (

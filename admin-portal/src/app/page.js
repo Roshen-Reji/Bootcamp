@@ -13,13 +13,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -85,7 +80,6 @@ export default function LoginPage() {
     <div className={styles.container}>
       <SocietyBackground society="computer_society" />
       
-      {/* Floating gradient orbs */}
       <div className={styles.orbContainer}>
         <motion.div
           className={styles.orb}
@@ -112,14 +106,14 @@ export default function LoginPage() {
       <motion.div
         className={styles.loginWrapper}
         initial={{ opacity: 0, y: 30 }}
-        animate={mounted ? { opacity: 1, y: 0 } : {}}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
       >
         {/* Logo / Branding */}
         <motion.div
           className={styles.branding}
           initial={{ opacity: 0, y: -20 }}
-          animate={mounted ? { opacity: 1, y: 0 } : {}}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.5 }}
         >
           <div className={styles.logoIcon}>
@@ -133,7 +127,7 @@ export default function LoginPage() {
         <motion.div
           className={styles.loginCard}
           initial={{ opacity: 0, y: 20 }}
-          animate={mounted ? { opacity: 1, y: 0 } : {}}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, duration: 0.5 }}
         >
           <form onSubmit={handleLogin} className={styles.form}>
@@ -205,7 +199,7 @@ export default function LoginPage() {
         <motion.p
           className={styles.footerText}
           initial={{ opacity: 0 }}
-          animate={mounted ? { opacity: 1 } : {}}
+          animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
         >
           Students? Use the <strong>Student Portal</strong> to log in.

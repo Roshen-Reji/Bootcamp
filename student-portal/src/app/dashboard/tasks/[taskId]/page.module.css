@@ -64,6 +64,25 @@
   min-height: 400px;
 }
 
+.taskShell {
+  overflow: hidden;
+}
+
+.taskOverview {
+  padding-bottom: var(--space-xl);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.eyebrow {
+  display: inline-flex;
+  margin-bottom: var(--space-xs);
+  color: var(--color-accent);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .sectionTitle {
   font-size: 1.1rem;
   font-weight: 700;
@@ -88,6 +107,46 @@
   border: 1px solid var(--glass-border);
 }
 
+.guidelinesBlock {
+  margin-top: var(--space-lg);
+  padding: var(--space-md);
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+}
+
+.guidelinesBlock h3 {
+  margin: 0 0 var(--space-sm);
+  font-size: 0.95rem;
+}
+
+.guidelinesBlock div {
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.learningSection {
+  padding-top: var(--space-xl);
+}
+
+.learningHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.emptyPanel {
+  padding: var(--space-lg);
+  border: 1px dashed var(--glass-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
 /* Tutorials */
 .tutorialList {
   display: flex;
@@ -98,21 +157,33 @@
 .tutorialItem {
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
-  padding-bottom: var(--space-lg);
-  border-bottom: 1px solid var(--glass-border);
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.025);
 }
 
 .tutorialItem:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
+  border-bottom: 1px solid var(--glass-border);
 }
 
-.tutorialItem h4 {
+.tutorialHeader {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-sm);
+}
+
+.tutorialHeader h3 {
+  margin: 0;
   font-size: 1.1rem;
+}
+
+.tutorialHeader p {
+  margin: 4px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
 }
 
 .stepNum {
@@ -125,6 +196,7 @@
   color: white;
   border-radius: 50%;
   font-size: 0.8rem;
+  flex: 0 0 auto;
 }
 
 .tutContent {
@@ -150,6 +222,160 @@
   border: 0;
 }
 
+.videoWrapper video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.subtasksPanel {
+  margin-top: var(--space-sm);
+  padding: var(--space-md);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.subtasksHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.subtasksHeader h4 {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.subtasksHeader span {
+  min-width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--color-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.emptySubtasks {
+  margin: 0;
+  color: var(--color-text-tertiary);
+  font-size: 0.85rem;
+}
+
+.subtaskList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.subtaskItem {
+  padding: var(--space-md);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.subtaskTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.subtaskInfo {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+}
+
+.subtaskType {
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  border-radius: var(--radius-sm);
+  background: rgba(108, 99, 255, 0.16);
+  color: var(--color-primary);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.subtaskInfo h5 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.subtaskInfo p {
+  margin: 4px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.subtaskActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.subtaskPoints {
+  color: #ffa502;
+  font-size: 0.85rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.subtaskNote {
+  margin-top: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+}
+
+.subtaskNote strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.subtaskNote p {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.noteApproved {
+  border: 1px solid rgba(46, 213, 115, 0.24);
+  background: rgba(46, 213, 115, 0.06);
+}
+
+.noteApproved strong {
+  color: #2ed573;
+}
+
+.noteRejected {
+  border: 1px solid rgba(255, 71, 87, 0.25);
+  background: rgba(255, 71, 87, 0.06);
+}
+
+.noteRejected strong {
+  color: #ff4757;
+}
+
 /* Submission */
 .submissionCard {
   position: sticky;
@@ -162,8 +388,49 @@
   gap: var(--space-md);
 }
 
+.revisionPanel {
+  padding: var(--space-md);
+  border: 1px solid rgba(255, 71, 87, 0.28);
+  border-radius: var(--radius-md);
+  background: rgba(255, 71, 87, 0.06);
+}
+
+.revisionPanel > strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #ff4757;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.revisionPanel > p {
+  margin: 0 0 var(--space-md);
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
 .editorArea {
   margin-top: var(--space-sm);
+}
+
+.choiceList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.choiceItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 10px 12px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.035);
+  cursor: pointer;
 }
 
 .monacoWrapper {
@@ -198,6 +465,32 @@
   color: var(--color-text-secondary);
 }
 
+.reviewerNote {
+  width: 100%;
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  border: 1px solid rgba(46, 213, 115, 0.25);
+  border-radius: var(--radius-md);
+  background: rgba(46, 213, 115, 0.06);
+  text-align: left;
+}
+
+.reviewerNote strong {
+  display: block;
+  margin-bottom: 6px;
+  color: #2ed573;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.reviewerNote p {
+  margin: 0;
+  color: var(--color-text);
+  line-height: 1.5;
+}
+
 @media (max-width: 1024px) {
   .grid {
     grid-template-columns: 1fr;
@@ -205,6 +498,15 @@
 
   .submissionCard {
     position: static;
+  }
+
+  .subtaskTop,
+  .learningHeader {
+    flex-direction: column;
+  }
+
+  .subtaskActions {
+    justify-content: flex-start;
   }
 }
 
@@ -242,4 +544,10 @@
 .textContent {
   white-space: pre-wrap;
   line-height: 1.6;
+}
+
+.modalForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
 }

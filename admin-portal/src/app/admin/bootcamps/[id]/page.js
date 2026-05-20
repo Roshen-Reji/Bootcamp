@@ -6,15 +6,8 @@ import { motion } from 'framer-motion';
 import { getBootcamp, updateBootcamp } from '@/lib/db';
 import SocietyBackground from '@/components/backgrounds/SocietyBackground';
 import GlassCard from '@/components/ui/GlassCard';
+import { getSocietyLabel } from '@/shared/societies';
 import styles from './page.module.css';
-
-const SOCIETY_NAMES = {
-  computer_society: 'Computer Society',
-  student_branch: 'Student Branch',
-  women_in_engineering: 'Women In Engineering',
-  robotics: 'Robotics & Automation',
-  industrial_applications: 'Industrial Applications',
-};
 
 const TABS = [
   { id: 'overview', label: 'Overview', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> },
@@ -88,7 +81,7 @@ export default function BootcampDetailPage() {
               <h1 className={styles.bcName}>{bootcamp.name}</h1>
               <div className={styles.bcMeta}>
                 <span className={styles.societyBadge} style={{ color: bootcamp.colorTheme?.primary }}>
-                  {SOCIETY_NAMES[bootcamp.society]}
+                  {getSocietyLabel(bootcamp.society)}
                 </span>
                 {bootcamp.teamConfig?.enabled && (
                   <span className="badge badge-info">Team-based</span>

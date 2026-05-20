@@ -13,25 +13,19 @@ export default function StudentLoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // Redirect if already logged in
   useEffect(() => {
     if (!authLoading && user) {
       if (user.role === 'student') {
         router.push('/dashboard');
-      } else {
-        // Admins/volunteers shouldn't be here, but just in case
-        setError('Please use the Admin Portal.');
       }
     }
   }, [user, authLoading, router]);
+
+  const visibleError = error || (!authLoading && user && user.role !== 'student' ? 'Please use the Admin Portal.' : '');
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -95,13 +89,13 @@ export default function StudentLoginPage() {
       <motion.div
         className={styles.loginWrapper}
         initial={{ opacity: 0, y: 30 }}
-        animate={mounted ? { opacity: 1, y: 0 } : {}}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
       >
         <motion.div
           className={styles.branding}
           initial={{ opacity: 0, y: -20 }}
-          animate={mounted ? { opacity: 1, y: 0 } : {}}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.5 }}
         >
           <div className={styles.logoIcon}>
@@ -114,7 +108,7 @@ export default function StudentLoginPage() {
         <motion.div
           className={styles.loginCard}
           initial={{ opacity: 0, y: 20 }}
-          animate={mounted ? { opacity: 1, y: 0 } : {}}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, duration: 0.5 }}
         >
           <form onSubmit={handleLogin} className={styles.form}>
@@ -151,7 +145,7 @@ export default function StudentLoginPage() {
             </div>
 
             <AnimatePresence>
-              {error && (
+              {visibleError && (
                 <motion.div
                   className={styles.error}
                   initial={{ opacity: 0, height: 0 }}
@@ -159,7 +153,7 @@ export default function StudentLoginPage() {
                   exit={{ opacity: 0, height: 0 }}
                   transition={{ duration: 0.2 }}
                 >
-                  {error}
+                  {visibleError}
                 </motion.div>
               )}
             </AnimatePresence>

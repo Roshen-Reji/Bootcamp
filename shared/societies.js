@@ -93,4 +93,19 @@ export const SOCIETIES = {
 
 export const SOCIETY_LIST = Object.values(SOCIETIES);
 
+export const normalizeSocietyIds = (society) => {
+  if (Array.isArray(society)) return society.filter(Boolean);
+  if (typeof society === 'string' && society.trim()) return [society];
+  return [];
+};
+
+export const getPrimarySocietyId = (society) => normalizeSocietyIds(society)[0] || 'student_branch';
+
 export const getSociety = (id) => SOCIETIES[id] || SOCIETIES.student_branch;
+
+export const getSocieties = (society) => normalizeSocietyIds(society).map(getSociety);
+
+export const getSocietyLabel = (society) => {
+  const names = getSocieties(society).map(item => item.shortName || item.name);
+  return names.length > 0 ? names.join(', ') : 'IEEE Bootcamp';
+};

@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { subscribeToBootcamps } from '@/lib/db';
 import GlassCard from '@/components/ui/GlassCard';
+import { getPrimarySocietyId, getSocietyLabel } from '@/shared/societies';
 import styles from './page.module.css';
 
 const staggerContainer = {
@@ -132,7 +133,7 @@ export default function AdminDashboard() {
                     <div className={styles.bcCard}>
                       <div className={styles.bcHeader}>
                         <span className={styles.bcIcon}>
-                          {SOCIETY_ICONS[bc.society] || <BookIcon size={24} />}
+                          {SOCIETY_ICONS[getPrimarySocietyId(bc.society)] || <BookIcon size={24} />}
                         </span>
                         <span className="badge badge-success">Active</span>
                       </div>
@@ -140,7 +141,7 @@ export default function AdminDashboard() {
                       <p className={styles.bcDesc}>{bc.description}</p>
                       <div className={styles.bcMeta}>
                         <span className={styles.bcSociety}>
-                          {bc.societies?.replace(/_/g, ' ')}
+                          {getSocietyLabel(bc.society)}
                         </span>
                         {bc.teamConfig?.enabled && (
                           <span className="badge badge-info">Team-based</span>
