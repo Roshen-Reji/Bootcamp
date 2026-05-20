@@ -3,29 +3,21 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { subscribeToBootcamps, deleteBootcamp } from '@/lib/db';
+import { subscribeToBootcamps } from '@/lib/db';
 import GlassCard from '@/components/ui/GlassCard';
+import { getSocieties, getSocietyLabel } from '@/shared/societies';
 import styles from './page.module.css';
-
-const SOCIETY_ICONS = {
-  computer_society: '💻',
-  student_branch: '🎓',
-  women_in_engineering: '👩‍💻',
-  robotics: '🤖',
-  industrial_applications: '⚙️',
-};
-
-const SOCIETY_NAMES = {
-  computer_society: 'Computer Society',
-  student_branch: 'Student Branch',
-  women_in_engineering: 'Women In Engineering',
-  robotics: 'Robotics & Automation',
-  industrial_applications: 'Industrial Applications',
-};
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
   show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.22, 1, 0.36, 1] } },
+};
+
+const getBootcampMark = (bootcamp) => {
+  if (bootcamp.icon) return bootcamp.icon;
+  const societies = getSocieties(bootcamp.society);
+  if (societies.length > 1) return `${societies.length}x`;
+  return societies[0]?.shortName?.slice(0, 2).toUpperCase() || 'BC';
 };
 
 export default function BootcampsPage() {
@@ -64,7 +56,6 @@ export default function BootcampsPage() {
           </motion.button>
         </div>
 
-        {/* Filters */}
         <div className={styles.filters}>
           {['all', 'active', 'archived'].map((f) => (
             <button
@@ -80,11 +71,10 @@ export default function BootcampsPage() {
           ))}
         </div>
 
-        {/* Bootcamp Grid */}
         {filtered.length === 0 ? (
           <GlassCard hover={false} padding="xl">
             <div className="empty-state">
-              <div className="empty-state-icon">🚀</div>
+              <div className="empty-state-icon">BC</div>
               <h3>No bootcamps found</h3>
               <p className="empty-state-text">
                 {filter === 'all'
@@ -95,60 +85,65 @@ export default function BootcampsPage() {
           </GlassCard>
         ) : (
           <div className={styles.grid}>
-            {filtered.map((bc, i) => (
-              <motion.div
-                key={bc.id}
-                variants={fadeUp}
-                initial="hidden"
-                animate="show"
-                transition={{ delay: i * 0.05 }}
-              >
-                <GlassCard
-                  glow
-                  padding="lg"
-                  onClick={() => router.push(`/admin/bootcamps/${bc.id}`)}
+            {filtered.map((bc, i) => {
+              const societies = getSocieties(bc.society);
+              return (
+                <motion.div
+                  key={bc.id}
+                  variants={fadeUp}
+                  initial="hidden"
+                  animate="show"
+                  transition={{ delay: i * 0.05 }}
                 >
-                  <div className={styles.card}>
-                    <div className={styles.cardTop}>
-                      <span className={styles.cardIcon}>
-                        {bc.icon || SOCIETY_ICONS[bc.society] || '🚀'}
-                      </span>
-                      <span className={`badge ${bc.status === 'active' ? 'badge-success' : 'badge-warning'}`}>
-                        {bc.status}
-                      </span>
-                    </div>
-                    <h3 className={styles.cardName}>{bc.name}</h3>
-                    <p className={styles.cardDesc}>{bc.description}</p>
-                    <div className={styles.cardFooter}>
-                      <div className={styles.societyTag}>
-                        <span>{SOCIETY_ICONS[bc.society]}</span>
-                        <span>{SOCIETY_NAMES[bc.society] || bc.society}</span>
+                  <GlassCard
+                    glow
+                    padding="lg"
+                    onClick={() => router.push(`/admin/bootcamps/${bc.id}`)}
+                  >
+                    <div className={styles.card}>
+                      <div className={styles.cardTop}>
+                        <span className={styles.cardIcon}>
+                          {getBootcampMark(bc)}
+                        </span>
+                        <span className={`badge ${bc.status === 'active' ? 'badge-success' : 'badge-warning'}`}>
+                          {bc.status}
+                        </span>
                       </div>
-                      <div className={styles.cardBadges}>
-                        {bc.teamConfig?.enabled && (
-                          <span className="badge badge-info">Teams</span>
-                        )}
+                      <h3 className={styles.cardName}>{bc.name}</h3>
+                      <p className={styles.cardDesc}>{bc.description}</p>
+                      <div className={styles.cardFooter}>
+                        <div className={styles.societyTag} title={getSocietyLabel(bc.society)}>
+                          {societies.length > 0 ? societies.map((society) => (
+                            <span key={society.id} className={styles.societyChip}>
+                              {society.shortName}
+                            </span>
+                          )) : <span>{getSocietyLabel(bc.society)}</span>}
+                        </div>
+                        <div className={styles.cardBadges}>
+                          {bc.teamConfig?.enabled && (
+                            <span className="badge badge-info">Teams</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className={styles.themePreview}>
+                        <div
+                          className={styles.themeColor}
+                          style={{ background: bc.colorTheme?.primary || '#6C63FF' }}
+                        />
+                        <div
+                          className={styles.themeColor}
+                          style={{ background: bc.colorTheme?.secondary || '#FF6584' }}
+                        />
+                        <div
+                          className={styles.themeColor}
+                          style={{ background: bc.colorTheme?.accent || '#00D9FF' }}
+                        />
                       </div>
                     </div>
-                    {/* Color theme preview */}
-                    <div className={styles.themePreview}>
-                      <div
-                        className={styles.themeColor}
-                        style={{ background: bc.colorTheme?.primary || '#6C63FF' }}
-                      />
-                      <div
-                        className={styles.themeColor}
-                        style={{ background: bc.colorTheme?.secondary || '#FF6584' }}
-                      />
-                      <div
-                        className={styles.themeColor}
-                        style={{ background: bc.colorTheme?.accent || '#00D9FF' }}
-                      />
-                    </div>
-                  </div>
-                </GlassCard>
-              </motion.div>
-            ))}
+                  </GlassCard>
+                </motion.div>
+              );
+            })}
           </div>
         )}
       </motion.div>

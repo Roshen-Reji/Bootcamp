@@ -80,7 +80,6 @@ export default function VolunteerStudents() {
     }
   };
 
-  // ADDED: Function to update the student's level instantly
   const handleLevelUpdate = async (studentId, newLevel) => {
     try {
       await updateStudent(user.bootcampId, studentId, { level: newLevel });
@@ -122,7 +121,6 @@ export default function VolunteerStudents() {
                       {student.teamId && ` • Team: ${teams.find(t => t.id === student.teamId)?.name || 'Unknown'}`}
                     </span>
                   </div>
-                  {/* CHANGED: Swapped static badge for an interactive dropdown */}
                   <select
                     className="select"
                     value={student.level || 'beginner'}

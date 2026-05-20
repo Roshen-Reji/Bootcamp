@@ -20,7 +20,7 @@ export default function VolunteerDashboard() {
   const [bootcamp, setBootcamp] = useState(null);
   const [students, setStudents] = useState([]);
   const [submissions, setSubmissions] = useState([]);
-  const [tasks, setTasks] = useState([]); // ADDED: Need tasks to get task titles
+  const [tasks, setTasks] = useState([]);
 
   useEffect(() => {
     if (!user || !user.bootcampId) return;

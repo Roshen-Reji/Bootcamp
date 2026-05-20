@@ -12,19 +12,19 @@ import styles from './page.module.css';
 export default function StudentLeaderboardPage() {
   const { user } = useAuth();
   const router = useRouter();
-  
+
   const [bootcamp, setBootcamp] = useState(null);
   const [leaderboard, setLeaderboard] = useState([]);
 
   useEffect(() => {
     if (!user?.bootcampId) return;
-    
+
     const loadBc = async () => {
       const bc = await getBootcamp(user.bootcampId);
       if (bc) setBootcamp(bc);
     };
     loadBc();
-    
+
     const unsub = subscribeToLeaderboard(user.bootcampId, setLeaderboard);
     return () => unsub();
   }, [user]);
@@ -33,14 +33,16 @@ export default function StudentLeaderboardPage() {
 
   // Sorting
   const sortedLeaderboard = [...leaderboard].sort((a, b) => (b.totalPoints || 0) - (a.totalPoints || 0));
-  
+
   // Find current user's rank
-  const myRank = sortedLeaderboard.findIndex(entry => entry.id === user?.uid) + 1;
+  const myEntry = sortedLeaderboard.find(entry => entry.id === user?.uid);
+  const myRank = myEntry ? sortedLeaderboard.indexOf(myEntry) + 1 : 0;
+  const myPoints = myEntry?.totalPoints || 0;
 
   return (
     <div className={styles.container}>
       <SocietyBackground society={bootcamp.society} customColor={bootcamp.colorTheme?.primary} />
-      
+
       <div className={styles.header}>
         <div>
           <button className="btn btn-ghost btn-sm mb-4" onClick={() => router.push('/dashboard')}>
@@ -61,7 +63,7 @@ export default function StudentLeaderboardPage() {
             </div>
           </motion.div>
         )}
-        
+
         {sortedLeaderboard.length >= 1 && (
           <motion.div className={`${styles.podiumItem} ${styles.firstPlace}`} initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }}>
             <div className={styles.podiumAvatar}>🥇</div>
@@ -86,13 +88,13 @@ export default function StudentLeaderboardPage() {
       <GlassCard hover={false} padding="lg">
         {myRank > 0 && (
           <div className={styles.myRankAlert}>
-            <span>You are currently ranked <strong>#{myRank}</strong> with <strong>{user?.totalPoints || 0} pts</strong>!</span>
+            <span>You are currently ranked <strong>#{myRank}</strong> with <strong>{myPoints} pts</strong>!</span>
           </div>
         )}
-        
+
         <div className={styles.list}>
           {sortedLeaderboard.slice(3).map((entry, i) => (
-            <motion.div 
+            <motion.div
               key={entry.id}
               className={`${styles.listItem} ${entry.id === user?.uid ? styles.listItemMe : ''}`}
               initial={{ opacity: 0, x: -20 }}

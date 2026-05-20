@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { getBootcamp, subscribeToSubmissions, subscribeToStudents, subscribeToTasks, reviewSubmission } from '@/lib/db';
 import SocietyBackground from '@/components/backgrounds/SocietyBackground';
 import GlassCard from '@/components/ui/GlassCard';
+import SubmissionAssistantPanel from '@/components/submissions/SubmissionAssistantPanel';
 import styles from './page.module.css';
 
 // Icons
@@ -33,7 +34,7 @@ export default function SubmissionsPage() {
 
   const [customPoints, setCustomPoints] = useState({});
   const [rejectingId, setRejectingId] = useState(null);
-  const [rejectNote, setRejectNote] = useState('');
+  const [reviewNotes, setReviewNotes] = useState({});
 
   useEffect(() => {
     const loadBc = async () => {
@@ -102,6 +103,12 @@ export default function SubmissionsPage() {
       setProcessingId(null);
     }
   };
+
+  const setDraftNote = (submissionId, note) => {
+    setReviewNotes(prev => ({ ...prev, [submissionId]: note }));
+  };
+
+  const getDraftNote = (sub) => reviewNotes[sub.id] ?? sub.reviewerNote ?? '';
 
   if (!bootcamp) return null;
 
@@ -229,16 +236,39 @@ export default function SubmissionsPage() {
                           )}
                         </div>
 
+                        <SubmissionAssistantPanel
+                          submission={sub}
+                          maxPoints={getMaxPoints(sub)}
+                          onUseFeedback={(note) => setDraftNote(sub.id, note)}
+                          onUsePoints={(points) => setCustomPoints(prev => ({ ...prev, [sub.id]: points }))}
+                        />
+
+                        {sub.reviewerNote && (
+                          <div className={styles.reviewNoteDisplay}>
+                            <strong>Student-visible review</strong>
+                            <p>{sub.reviewerNote}</p>
+                          </div>
+                        )}
+
                         {sub.status === 'pending' && (
                           <div style={{ display: 'flex', gap: '12px', marginTop: '16px', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <div className={styles.reviewNoteBox}>
+                              <label>Review note visible to student</label>
+                              <textarea
+                                className="textarea"
+                                value={getDraftNote(sub)}
+                                onChange={(e) => setDraftNote(sub.id, e.target.value)}
+                                placeholder="Add feedback, even when approving correct work."
+                              />
+                            </div>
                             {rejectingId === sub.id ? (
                               <div style={{ width: '100%', background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
                                 <label style={{ fontSize: '0.85rem', marginBottom: '8px', display: 'block', opacity: 0.8 }}>Reason for Rejection (Visible to Student)</label>
                                 <textarea
                                   className="textarea"
                                   style={{ minHeight: '60px', marginBottom: '12px' }}
-                                  value={rejectNote}
-                                  onChange={(e) => setRejectNote(e.target.value)}
+                                  value={getDraftNote(sub)}
+                                  onChange={(e) => setDraftNote(sub.id, e.target.value)}
                                   placeholder="e.g., Please double check your math on step 3..."
                                 />
                                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
@@ -246,9 +276,8 @@ export default function SubmissionsPage() {
                                   <button
                                     className={styles.rejectBtn}
                                     onClick={() => {
-                                      handleStatusUpdate(sub, 'rejected', 0, rejectNote);
+                                      handleStatusUpdate(sub, 'rejected', 0, getDraftNote(sub));
                                       setRejectingId(null);
-                                      setRejectNote('');
                                     }}
                                     disabled={processingId === sub.id}
                                   >
@@ -262,7 +291,6 @@ export default function SubmissionsPage() {
                                   className={styles.rejectBtn}
                                   onClick={() => {
                                     setRejectingId(sub.id);
-                                    setRejectNote('');
                                   }}
                                   disabled={processingId === sub.id}
                                 >
@@ -290,7 +318,7 @@ export default function SubmissionsPage() {
                                   className={styles.approveBtn}
                                   onClick={() => {
                                     const pts = customPoints[sub.id] !== undefined ? customPoints[sub.id] : getMaxPoints(sub);
-                                    handleStatusUpdate(sub, 'approved', pts);
+                                    handleStatusUpdate(sub, 'approved', pts, getDraftNote(sub));
                                   }}
                                   disabled={processingId === sub.id}
                                 >
@@ -301,6 +329,27 @@ export default function SubmissionsPage() {
                                 </button>
                               </>
                             )}
+                          </div>
+                        )}
+
+                        {sub.status !== 'pending' && (
+                          <div className={styles.reviewNoteBox}>
+                            <label>Send another review note to student</label>
+                            <textarea
+                              className="textarea"
+                              value={getDraftNote(sub)}
+                              onChange={(e) => setDraftNote(sub.id, e.target.value)}
+                              placeholder="Add a note without changing the result."
+                            />
+                            <div className={styles.reviewNoteActions}>
+                              <button
+                                className="btn btn-secondary btn-sm"
+                                onClick={() => handleStatusUpdate(sub, sub.status, sub.pointsAwarded || 0, getDraftNote(sub))}
+                                disabled={processingId === sub.id || !getDraftNote(sub).trim()}
+                              >
+                                {processingId === sub.id ? 'Saving...' : 'Send Review'}
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>

@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { auth } from '@/lib/firebase';
+import { updateUserProfile } from '@/lib/auth';
+import { updateOwnBootcampProfile } from '@/lib/db';
 import { updateProfile, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
 import GlassCard from '@/components/ui/GlassCard';
 import styles from './page.module.css';
@@ -19,7 +21,7 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('profile');
 
   // Profile form
-  const [displayName, setDisplayName] = useState('');
+  const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileMsg, setProfileMsg] = useState(null);
 
@@ -30,12 +32,6 @@ export default function SettingsPage() {
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordMsg, setPasswordMsg] = useState(null);
 
-  useEffect(() => {
-    if (user?.displayName) {
-      setDisplayName(user.displayName);
-    }
-  }, [user]);
-
   const handleProfileUpdate = async (e) => {
     e.preventDefault();
     if (!displayName.trim()) return;
@@ -43,6 +39,10 @@ export default function SettingsPage() {
     setProfileMsg(null);
     try {
       await updateProfile(auth.currentUser, { displayName: displayName.trim() });
+      await updateUserProfile(user.uid, { displayName: displayName.trim() });
+      if (user.bootcampId) {
+        await updateOwnBootcampProfile(user.bootcampId, user.uid, user.role, { displayName: displayName.trim() });
+      }
       if (refreshUser) await refreshUser();
       setProfileMsg({ type: 'success', text: 'Profile updated successfully!' });
     } catch (err) {

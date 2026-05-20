@@ -196,6 +196,43 @@
   color: var(--color-text-secondary);
 }
 
+.reviewNoteDisplay,
+.reviewNoteBox {
+  width: 100%;
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.reviewNoteDisplay strong,
+.reviewNoteBox label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.reviewNoteDisplay p {
+  margin: 0;
+  color: var(--color-text);
+  line-height: 1.5;
+}
+
+.reviewNoteBox textarea {
+  min-height: 76px;
+}
+
+.reviewNoteActions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-sm);
+}
+
 .subFooter {
   display: flex;
   justify-content: space-between;

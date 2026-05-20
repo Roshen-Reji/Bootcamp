@@ -56,7 +56,11 @@ export function ThemeProvider({ children }) {
       return;
     }
 
-    const societyTheme = SOCIETIES[bootcamp.society] || {};
+    const societyIds = Array.isArray(bootcamp.society)
+      ? bootcamp.society.filter(Boolean)
+      : (bootcamp.society ? [bootcamp.society] : []);
+    const primarySociety = societyIds[0];
+    const societyTheme = SOCIETIES[primarySociety] || {};
     const customTheme = bootcamp.colorTheme || {};
 
     const mergedTheme = {
@@ -66,7 +70,7 @@ export function ThemeProvider({ children }) {
     };
 
     setTheme(mergedTheme);
-    setSociety(bootcamp.society);
+    setSociety(societyIds);
 
     // Apply CSS custom properties
     const root = document.documentElement;

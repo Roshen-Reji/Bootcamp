@@ -24,7 +24,6 @@
   margin-top: 4px;
 }
 
-/* Tabs */
 .tabs {
   display: flex;
   gap: var(--space-sm);
@@ -55,8 +54,8 @@
 }
 
 .tabActive {
-  background: var(--color-primary) !important;
-  color: white !important;
+  background: var(--color-primary);
+  color: white;
 }
 
 .tabIcon {
@@ -64,7 +63,6 @@
   align-items: center;
 }
 
-/* Section */
 .sectionHeader {
   display: flex;
   align-items: center;
@@ -96,7 +94,6 @@
   color: var(--color-text-secondary);
 }
 
-/* Form */
 .form {
   display: flex;
   flex-direction: column;
@@ -129,18 +126,14 @@
   outline: none;
 }
 
-.input:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.15);
-}
-
 .input:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-.input::placeholder {
-  color: var(--color-text-tertiary);
+.input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.15);
 }
 
 .helpText {
@@ -148,7 +141,6 @@
   color: var(--color-text-tertiary);
 }
 
-/* Messages */
 .message {
   display: flex;
   align-items: center;
@@ -171,7 +163,6 @@
   border: 1px solid rgba(255, 71, 87, 0.25);
 }
 
-/* Submit Button */
 .submitBtn {
   display: flex;
   align-items: center;
@@ -191,7 +182,6 @@
 }
 
 .submitBtn:hover:not(:disabled) {
-  background: var(--color-primary-hover, #5b54e0);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(108, 99, 255, 0.3);
 }
@@ -201,7 +191,6 @@
   cursor: not-allowed;
 }
 
-/* Spinner */
 .spinner {
   width: 18px;
   height: 18px;
@@ -219,13 +208,12 @@
   .container {
     padding: 0 var(--space-sm);
   }
-  
+
   .tabs {
     overflow-x: auto;
   }
-  
+
   .submitBtn {
     width: 100%;
-    justify-content: center;
   }
 }
