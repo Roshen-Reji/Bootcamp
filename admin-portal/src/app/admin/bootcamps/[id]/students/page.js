@@ -35,6 +35,12 @@ export default function StudentsPage() {
 
   const [teamForm, setTeamForm] = useState({ name: '' });
 
+  // Password Update State
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [selectedStudentForPassword, setSelectedStudentForPassword] = useState(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
   useEffect(() => {
     const loadBc = async () => {
       const bc = await getBootcamp(id);
@@ -106,6 +112,40 @@ export default function StudentsPage() {
       console.error(err);
       alert("Failed to update student level");
     }
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    if (!selectedStudentForPassword || !newPassword) return;
+
+    setIsChangingPassword(true);
+    try {
+      const res = await fetch('/api/users/password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          uid: selectedStudentForPassword.uid || selectedStudentForPassword.id,
+          newPassword: newPassword
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      alert('Password updated successfully!');
+      setPasswordModalOpen(false);
+      setNewPassword('');
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  const openPasswordModal = (student) => {
+    setSelectedStudentForPassword(student);
+    setNewPassword('');
+    setPasswordModalOpen(true);
   };
 
   if (!bootcamp) return null;
@@ -183,7 +223,16 @@ export default function StudentsPage() {
                         {teams.find(t => t.id === student.teamId)?.name || '-'}
                       </td>
                     )}
-                    <td className={styles.pointsCell}>{student.totalPoints || 0}</td>
+                    <td className={styles.pointsCell}>
+                      {student.totalPoints || 0}
+                      <button
+                        onClick={() => openPasswordModal(student)}
+                        className="btn btn-secondary btn-sm"
+                        style={{ marginLeft: '12px', padding: '4px 8px' }}
+                      >
+                        Key
+                      </button>
+                    </td>
                   </tr>
                 ))}
                 {students.length === 0 && (
@@ -269,6 +318,30 @@ export default function StudentsPage() {
           </div>
           <button type="submit" className="btn btn-primary mt-4" disabled={loading}>
             {loading ? 'Creating...' : 'Create Team'}
+          </button>
+        </form>
+      </Modal>
+
+      {/* Change Password Modal */}
+      <Modal
+        isOpen={passwordModalOpen}
+        onClose={() => setPasswordModalOpen(false)}
+        title={`Change Password: ${selectedStudentForPassword?.displayName}`}
+      >
+        <form onSubmit={handleChangePassword} className="flex-col gap-md">
+          <div className="input-group">
+            <label>New Password</label>
+            <input
+              required
+              minLength={6}
+              type="password"
+              className="input"
+              value={newPassword}
+              onChange={e => setNewPassword(e.target.value)}
+            />
+          </div>
+          <button type="submit" className="btn btn-primary mt-4" disabled={isChangingPassword}>
+            {isChangingPassword ? 'Updating...' : 'Update Password'}
           </button>
         </form>
       </Modal>
