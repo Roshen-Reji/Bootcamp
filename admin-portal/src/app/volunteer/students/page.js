@@ -26,6 +26,12 @@ export default function VolunteerStudents() {
     teamId: ''
   });
 
+  // Password Update State
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [selectedStudentForPassword, setSelectedStudentForPassword] = useState(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
   useEffect(() => {
     if (!user || !user.bootcampId) return;
 
@@ -89,6 +95,40 @@ export default function VolunteerStudents() {
     }
   };
 
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    if (!selectedStudentForPassword || !newPassword) return;
+
+    setIsChangingPassword(true);
+    try {
+      const res = await fetch('/api/users/password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          uid: selectedStudentForPassword.uid || selectedStudentForPassword.id,
+          newPassword: newPassword
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      alert('Password updated successfully!');
+      setPasswordModalOpen(false);
+      setNewPassword('');
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  const openPasswordModal = (student) => {
+    setSelectedStudentForPassword(student);
+    setNewPassword('');
+    setPasswordModalOpen(true);
+  };
+
   if (!bootcamp) return null;
 
   return (
@@ -121,22 +161,31 @@ export default function VolunteerStudents() {
                       {student.teamId && ` • Team: ${teams.find(t => t.id === student.teamId)?.name || 'Unknown'}`}
                     </span>
                   </div>
-                  <select
-                    className="select"
-                    value={student.level || 'beginner'}
-                    onChange={(e) => handleLevelUpdate(student.uid || student.id, e.target.value)}
-                    style={{
-                      padding: '4px 28px 4px 12px',
-                      fontSize: '0.75rem',
-                      height: 'auto',
-                      borderRadius: 'var(--radius-full)',
-                      width: 'auto'
-                    }}
-                  >
-                    <option value="beginner">Beginner</option>
-                    <option value="intermediate">Intermediate</option>
-                    <option value="advanced">Advanced</option>
-                  </select>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <select
+                      className="select"
+                      value={student.level || 'beginner'}
+                      onChange={(e) => handleLevelUpdate(student.uid || student.id, e.target.value)}
+                      style={{
+                        padding: '4px 28px 4px 12px',
+                        fontSize: '0.75rem',
+                        height: 'auto',
+                        borderRadius: 'var(--radius-full)',
+                        width: 'auto'
+                      }}
+                    >
+                      <option value="beginner">Beginner</option>
+                      <option value="intermediate">Intermediate</option>
+                      <option value="advanced">Advanced</option>
+                    </select>
+                    <button
+                      onClick={() => openPasswordModal(student)}
+                      className="btn btn-secondary btn-sm"
+                      style={{ marginLeft: '8px' }}
+                    >
+                      Change Pass
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -181,6 +230,30 @@ export default function VolunteerStudents() {
 
           <button type="submit" className="btn btn-primary mt-4" disabled={loading}>
             {loading ? 'Creating...' : 'Create Student'}
+          </button>
+        </form>
+      </Modal>
+
+      {/* Change Password Modal */}
+      <Modal
+        isOpen={passwordModalOpen}
+        onClose={() => setPasswordModalOpen(false)}
+        title={`Change Password: ${selectedStudentForPassword?.displayName}`}
+      >
+        <form onSubmit={handleChangePassword} className="flex-col gap-md">
+          <div className="input-group">
+            <label>New Password</label>
+            <input
+              required
+              minLength={6}
+              type="password"
+              className="input"
+              value={newPassword}
+              onChange={e => setNewPassword(e.target.value)}
+            />
+          </div>
+          <button type="submit" className="btn btn-primary mt-4" disabled={isChangingPassword}>
+            {isChangingPassword ? 'Updating...' : 'Update Password'}
           </button>
         </form>
       </Modal>

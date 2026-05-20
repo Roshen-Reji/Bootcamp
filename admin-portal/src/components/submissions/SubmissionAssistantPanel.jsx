@@ -1,7 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { analyzeSubmission } from '@/lib/submissionAssistant';
+import { useState } from 'react';
 import styles from './SubmissionAssistantPanel.module.css';
 
 const AssistantIcon = () => (
@@ -16,73 +15,99 @@ const AssistantIcon = () => (
 
 export default function SubmissionAssistantPanel({ submission, maxPoints, onUseFeedback, onUsePoints }) {
   const [open, setOpen] = useState(false);
-  const analysis = useMemo(
-    () => analyzeSubmission(submission, maxPoints),
-    [submission, maxPoints]
-  );
+  const [loading, setLoading] = useState(false);
+  const [analysis, setAnalysis] = useState(null);
+  const [error, setError] = useState(null);
+
+  const handleToggle = async () => {
+    const willOpen = !open;
+    setOpen(willOpen);
+
+    if (willOpen && !analysis && !loading) {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch('/api/submissions/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ submission, maxPoints })
+        });
+
+        if (!res.ok) throw new Error('Failed to generate AI review');
+        const data = await res.json();
+        setAnalysis(data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
 
   return (
     <div className={styles.assistant}>
-      <button type="button" className={styles.toggle} onClick={() => setOpen(value => !value)}>
+      <button type="button" className={styles.toggle} onClick={handleToggle}>
         <AssistantIcon />
-        <span>AI review assistant</span>
-        <span className={styles.verdict}>{analysis.verdict}</span>
+        <span>Gemini AI Review Assistant</span>
+        {analysis && <span className={styles.verdict}>{analysis.verdict}</span>}
       </button>
 
       {open && (
         <div className={styles.panel}>
-          <div className={styles.summaryRow}>
-            <div>
-              <span className={styles.label}>Summary</span>
-              <p>{analysis.summary}</p>
-            </div>
-            <div className={styles.pointsBox}>
-              <span className={styles.label}>Suggested</span>
-              <strong>{analysis.suggestedPoints}</strong>
-              <span>/ {maxPoints} pts</span>
-            </div>
-          </div>
+          {loading ? (
+            <p className={styles.muted}>Gemini is analyzing the submission...</p>
+          ) : error ? (
+            <p className={styles.muted} style={{ color: '#ff4757' }}>{error}</p>
+          ) : analysis ? (
+            <>
+              <div className={styles.summaryRow}>
+                <div>
+                  <span className={styles.label}>Summary</span>
+                  <p>{analysis.summary}</p>
+                </div>
+                <div className={styles.pointsBox}>
+                  <span className={styles.label}>Suggested</span>
+                  <strong>{analysis.suggestedPoints}</strong>
+                  <span>/ {maxPoints} pts</span>
+                </div>
+              </div>
 
-          <div className={styles.columns}>
-            <div>
-              <span className={styles.label}>Strengths</span>
-              {analysis.strengths.length > 0 ? (
-                <ul>
-                  {analysis.strengths.map(item => <li key={item}>{item}</li>)}
-                </ul>
-              ) : (
-                <p className={styles.muted}>No strong signals found automatically.</p>
+              <div className={styles.columns}>
+                <div>
+                  <span className={styles.label}>Strengths</span>
+                  {analysis.strengths?.length > 0 ? (
+                    <ul>{analysis.strengths.map((item, i) => <li key={i}>{item}</li>)}</ul>
+                  ) : (
+                    <p className={styles.muted}>No strong signals found automatically.</p>
+                  )}
+                </div>
+                <div>
+                  <span className={styles.label}>Check Carefully</span>
+                  {analysis.concerns?.length > 0 ? (
+                    <ul>{analysis.concerns.map((item, i) => <li key={i}>{item}</li>)}</ul>
+                  ) : (
+                    <p className={styles.muted}>No obvious issues detected.</p>
+                  )}
+                </div>
+              </div>
+
+              {analysis.questions?.length > 0 && (
+                <div className={styles.questions}>
+                  <span className={styles.label}>Reviewer prompts</span>
+                  <ul>{analysis.questions.map((item, i) => <li key={i}>{item}</li>)}</ul>
+                </div>
               )}
-            </div>
-            <div>
-              <span className={styles.label}>Check Carefully</span>
-              {analysis.concerns.length > 0 ? (
-                <ul>
-                  {analysis.concerns.map(item => <li key={item}>{item}</li>)}
-                </ul>
-              ) : (
-                <p className={styles.muted}>No obvious issues detected.</p>
-              )}
-            </div>
-          </div>
 
-          {analysis.questions.length > 0 && (
-            <div className={styles.questions}>
-              <span className={styles.label}>Reviewer prompts</span>
-              <ul>
-                {analysis.questions.map(item => <li key={item}>{item}</li>)}
-              </ul>
-            </div>
-          )}
-
-          <div className={styles.actions}>
-            <button type="button" className="btn btn-secondary btn-sm" onClick={() => onUseFeedback(analysis.suggestedFeedback)}>
-              Use Feedback
-            </button>
-            <button type="button" className="btn btn-secondary btn-sm" onClick={() => onUsePoints(analysis.suggestedPoints)}>
-              Use Points
-            </button>
-          </div>
+              <div className={styles.actions}>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => onUseFeedback(analysis.suggestedFeedback)}>
+                  Use Feedback
+                </button>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => onUsePoints(analysis.suggestedPoints)}>
+                  Use Points
+                </button>
+              </div>
+            </>
+          ) : null}
         </div>
       )}
     </div>
