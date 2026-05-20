@@ -8,13 +8,14 @@ import { getBootcamp, createTask } from '@/lib/db';
 import { TASK_LEVELS, SUBMISSION_TYPES, ASSIGNMENT_MODES } from '@/shared/constants';
 import SocietyBackground from '@/components/backgrounds/SocietyBackground';
 import GlassCard from '@/components/ui/GlassCard';
+import CustomDropdown from '@/components/ui/CustomDropdown';
 import styles from './page.module.css';
 
 export default function CreateTaskPage() {
   const { id } = useParams();
   const router = useRouter();
   const { user } = useAuth();
-  
+
   const [bootcamp, setBootcamp] = useState(null);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
@@ -52,7 +53,7 @@ export default function CreateTaskPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.title || form.submissionTypes.length === 0) return;
-    
+
     setLoading(true);
     try {
       await createTask(id, {
@@ -73,7 +74,7 @@ export default function CreateTaskPage() {
   return (
     <div className={styles.container}>
       <SocietyBackground society={bootcamp.society} customColor={bootcamp.colorTheme?.primary} />
-      
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -102,16 +103,16 @@ export default function CreateTaskPage() {
               </div>
 
               <div className="input-group">
-                <label>Difficulty Level</label>
-                <select
-                  className="select"
+                <label style={{ display: 'block', marginBottom: '8px' }}>Difficulty Level</label>
+                <CustomDropdown
                   value={form.level}
-                  onChange={(e) => updateForm('level', e.target.value)}
-                >
-                  <option value={TASK_LEVELS.BEGINNER}>Beginner</option>
-                  <option value={TASK_LEVELS.INTERMEDIATE}>Intermediate</option>
-                  <option value={TASK_LEVELS.ADVANCED}>Advanced</option>
-                </select>
+                  onChange={(val) => updateForm('level', val)}
+                  options={[
+                    { value: TASK_LEVELS.BEGINNER, label: 'Beginner' },
+                    { value: TASK_LEVELS.INTERMEDIATE, label: 'Intermediate' },
+                    { value: TASK_LEVELS.ADVANCED, label: 'Advanced' }
+                  ]}
+                />
               </div>
             </div>
 
@@ -151,15 +152,15 @@ export default function CreateTaskPage() {
               </div>
 
               <div className="input-group">
-                <label>Assignment Mode</label>
-                <select
-                  className="select"
+                <label style={{ display: 'block', marginBottom: '8px' }}>Assignment Mode</label>
+                <CustomDropdown
                   value={form.assignmentMode}
-                  onChange={(e) => updateForm('assignmentMode', e.target.value)}
-                >
-                  <option value={ASSIGNMENT_MODES.RANDOM}>Randomly Assigned</option>
-                  <option value={ASSIGNMENT_MODES.MANUAL}>Manually Assigned</option>
-                </select>
+                  onChange={(val) => updateForm('assignmentMode', val)}
+                  options={[
+                    { value: ASSIGNMENT_MODES.RANDOM, label: 'Randomly Assigned' },
+                    { value: ASSIGNMENT_MODES.MANUAL, label: 'Manually Assigned' }
+                  ]}
+                />
               </div>
             </div>
 
@@ -175,7 +176,7 @@ export default function CreateTaskPage() {
                       className={styles.hiddenCheckbox}
                     />
                     <span className={styles.typeIcon}>
-                      {type === 'code' ? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg> : type === 'video' ? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg> : type === 'image' ? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>}
+                      {type === 'code' ? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg> : type === 'video' ? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 7l-7 5 7 5V7z" /><rect x="1" y="5" width="15" height="14" rx="2" ry="2" /></svg> : type === 'image' ? <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg> : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg>}
                     </span>
                     <span className={styles.typeLabel}>
                       {type.charAt(0).toUpperCase() + type.slice(1)}
@@ -192,8 +193,8 @@ export default function CreateTaskPage() {
               <button type="button" className="btn btn-secondary" onClick={() => router.back()}>
                 Cancel
               </button>
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 className="btn btn-primary"
                 disabled={loading || !form.title || form.submissionTypes.length === 0}
               >

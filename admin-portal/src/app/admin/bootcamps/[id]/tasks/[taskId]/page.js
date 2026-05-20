@@ -4,13 +4,13 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
-// FIXED: Combined imports into a single line to prevent duplicate errors
 import { getBootcamp, subscribeToTutorials, subscribeToSubtasks, createTutorial, createSubtask, deleteTask, deleteTutorial } from '@/lib/db';
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import SocietyBackground from '@/components/backgrounds/SocietyBackground';
 import GlassCard from '@/components/ui/GlassCard';
 import Modal from '@/components/ui/Modal';
+import CustomDropdown from '@/components/ui/CustomDropdown';
 import { TUTORIAL_CONTENT_TYPES, SUBMISSION_TYPES } from '@/shared/constants';
 import styles from './page.module.css';
 
@@ -87,7 +87,7 @@ export default function TaskDetailPage() {
   const handleDeleteTask = async () => {
     if (!confirm('Are you sure you want to completely delete this task? This cannot be undone.')) return;
     try {
-      await deleteTask(id, taskId); // Make sure this exists in your lib/db.js!
+      await deleteTask(id, taskId);
       router.push(`/admin/bootcamps/${id}/tasks`);
     } catch (err) {
       console.error(err);
@@ -98,7 +98,7 @@ export default function TaskDetailPage() {
   const handleDeleteTutorial = async (tutorialId) => {
     if (!confirm('Are you sure you want to delete this tutorial?')) return;
     try {
-      await deleteTutorial(id, taskId, tutorialId); // Make sure this exists in your lib/db.js!
+      await deleteTutorial(id, taskId, tutorialId);
     } catch (err) {
       console.error(err);
       alert('Failed to delete tutorial.');
@@ -121,7 +121,6 @@ export default function TaskDetailPage() {
             ← Back to Tasks
           </button>
 
-          {/* ADDED: Delete Task Button in the Header */}
           <div className={styles.titleRow} style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <h1 className={styles.title}>{task.title}</h1>
@@ -136,7 +135,6 @@ export default function TaskDetailPage() {
         </div>
 
         <div className={styles.grid}>
-          {/* Main Task Details */}
           <div className={styles.mainContent}>
             <GlassCard hover={false} padding="lg" className="mb-6">
               <h3 className={styles.sectionTitle}>Task Details</h3>
@@ -167,7 +165,6 @@ export default function TaskDetailPage() {
               )}
             </GlassCard>
 
-            {/* Tutorials & Subtasks Hierarchy */}
             <div className={styles.hierarchySection}>
               <div className={styles.sectionHeader}>
                 <h3 className={styles.sectionTitle}>Tutorials & Subtasks</h3>
@@ -196,7 +193,6 @@ export default function TaskDetailPage() {
                           <p className={styles.tutorialDesc}>{tut.description}</p>
                         </div>
 
-                        {/* ADDED: Delete Tutorial Button grouped with Add Subtask */}
                         <div style={{ display: 'flex', gap: '8px' }}>
                           <button
                             className="btn btn-ghost btn-sm"
@@ -217,7 +213,6 @@ export default function TaskDetailPage() {
                         </div>
                       </div>
 
-                      {/* Subtasks for this tutorial */}
                       <div className={styles.subtasksList}>
                         {subtasks.filter(s => s.tutorialId === tut.id).map((sub, j) => (
                           <div key={sub.id} className={styles.subtaskItem}>
@@ -259,16 +254,16 @@ export default function TaskDetailPage() {
             <textarea className="textarea" value={tutorialForm.description} onChange={e => setTutorialForm({ ...tutorialForm, description: e.target.value })} />
           </div>
           <div className="input-group">
-            <label>Content Type</label>
-            <select className="select" value={tutorialForm.content[0].type} onChange={e => {
-              const newContent = [...tutorialForm.content];
-              newContent[0].type = e.target.value;
-              setTutorialForm({ ...tutorialForm, content: newContent });
-            }}>
-              {Object.values(TUTORIAL_CONTENT_TYPES).map(t => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
+            <label style={{ display: 'block', marginBottom: '8px' }}>Content Type</label>
+            <CustomDropdown
+              value={tutorialForm.content[0].type}
+              onChange={val => {
+                const newContent = [...tutorialForm.content];
+                newContent[0].type = val;
+                setTutorialForm({ ...tutorialForm, content: newContent });
+              }}
+              options={Object.values(TUTORIAL_CONTENT_TYPES).map(t => ({ value: t, label: t.charAt(0).toUpperCase() + t.slice(1) }))}
+            />
           </div>
           <div className="input-group">
             <label>URL / Content</label>
@@ -294,12 +289,12 @@ export default function TaskDetailPage() {
             <input type="number" required className="input" value={subtaskForm.points} onChange={e => setSubtaskForm({ ...subtaskForm, points: Number(e.target.value) })} />
           </div>
           <div className="input-group">
-            <label>Submission Type</label>
-            <select className="select" value={subtaskForm.submissionType} onChange={e => setSubtaskForm({ ...subtaskForm, submissionType: e.target.value })}>
-              {Object.values(SUBMISSION_TYPES).map(t => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
+            <label style={{ display: 'block', marginBottom: '8px' }}>Submission Type</label>
+            <CustomDropdown
+              value={subtaskForm.submissionType}
+              onChange={val => setSubtaskForm({ ...subtaskForm, submissionType: val })}
+              options={Object.values(SUBMISSION_TYPES).map(t => ({ value: t, label: t.charAt(0).toUpperCase() + t.slice(1) }))}
+            />
           </div>
           {subtaskForm.submissionType === 'multichoice' && (
             <div className="input-group">

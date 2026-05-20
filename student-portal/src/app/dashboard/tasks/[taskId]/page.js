@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { getBootcamp, subscribeToTutorials, subscribeToSubtasks, createSubmission, subscribeToSubmissions, reviewSubmission } from '@/lib/db';
 import { db } from '@/lib/firebase';
@@ -11,6 +11,7 @@ import Editor from '@monaco-editor/react';
 import SocietyBackground from '@/components/backgrounds/SocietyBackground';
 import GlassCard from '@/components/ui/GlassCard';
 import Modal from '@/components/ui/Modal';
+import CustomDropdown from '@/components/ui/CustomDropdown';
 import styles from './page.module.css';
 
 // HELPER: Intercepts standard YouTube links and forces them into embeddable iframes
@@ -24,7 +25,6 @@ const getYouTubeEmbedUrl = (url) => {
   return url;
 };
 
-// --- NEW: Polished Custom Dropdown Configuration & Component ---
 const SUBMISSION_TYPE_CONFIG = [
   { value: 'code', label: 'Code Editor', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg> },
   { value: 'link', label: 'URL Link', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg> },
@@ -33,111 +33,6 @@ const SUBMISSION_TYPE_CONFIG = [
   { value: 'image', label: 'Image Submission', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg> },
   { value: 'multichoice', label: 'Multiple Choice', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg> },
 ];
-
-const CustomDropdown = ({ value, options, onChange }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const currentOption = options.find(o => o.value === value) || options[0];
-
-  return (
-    <div ref={dropdownRef} style={{ position: 'relative', width: '100%', zIndex: isOpen ? 50 : 1 }}>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          width: '100%',
-          padding: '12px 16px',
-          background: 'rgba(255, 255, 255, 0.05)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: '8px',
-          color: '#fff',
-          fontSize: '0.95rem',
-          cursor: 'pointer',
-          transition: 'all 0.2s ease',
-          boxShadow: isOpen ? '0 0 0 2px rgba(108, 99, 255, 0.4)' : 'none',
-          outline: 'none'
-        }}
-      >
-        <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ color: 'var(--color-primary, #6c63ff)' }}>{currentOption?.icon}</span>
-          {currentOption?.label || value}
-        </span>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease', opacity: 0.6 }}>
-          <polyline points="6 9 12 15 18 9"></polyline>
-        </svg>
-      </button>
-
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10, scale: 0.95 }}
-            transition={{ duration: 0.15, ease: 'easeOut' }}
-            style={{
-              position: 'absolute',
-              top: 'calc(100% + 8px)',
-              left: 0,
-              right: 0,
-              background: 'rgba(20, 25, 35, 0.95)',
-              backdropFilter: 'blur(16px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '8px',
-              overflow: 'hidden',
-              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.1)'
-            }}
-          >
-            {options.map((opt) => (
-              <div
-                key={opt.value}
-                onClick={() => {
-                  onChange(opt.value);
-                  setIsOpen(false);
-                }}
-                style={{
-                  padding: '12px 16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  cursor: 'pointer',
-                  background: value === opt.value ? 'rgba(108, 99, 255, 0.15)' : 'transparent',
-                  color: value === opt.value ? '#fff' : '#cbd5e1',
-                  transition: 'background 0.2s',
-                  fontSize: '0.95rem'
-                }}
-                onMouseEnter={(e) => { if (value !== opt.value) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)' }}
-                onMouseLeave={(e) => { if (value !== opt.value) e.currentTarget.style.background = 'transparent' }}
-              >
-                <span style={{ color: value === opt.value ? 'var(--color-primary, #6c63ff)' : '#94a3b8' }}>
-                  {opt.icon}
-                </span>
-                <span style={{ fontWeight: value === opt.value ? 600 : 400 }}>{opt.label}</span>
-                {value === opt.value && (
-                  <svg style={{ marginLeft: 'auto', color: 'var(--color-primary, #6c63ff)' }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                )}
-              </div>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-};
-// --------------------------------------------------------
 
 export default function StudentTaskDetailPage() {
   const { taskId } = useParams();
@@ -191,7 +86,6 @@ export default function StudentTaskDetailPage() {
     const unsubSub = subscribeToSubtasks(user.bootcampId, taskId, setSubtasks);
 
     const unsubSubs = subscribeToSubmissions(user.bootcampId, (allSubs) => {
-      // Submissions are sorted by submittedAt desc, so the first match is the latest submission
       setSubmissions(allSubs.filter(s => s.studentId === user.uid && s.taskId === taskId));
     });
 
@@ -216,7 +110,6 @@ export default function StudentTaskDetailPage() {
         points: task.points || 0,
       });
 
-      // AUTO-GRADING LOGIC FOR MAIN TASK
       if (submissionType === 'multichoice' && task.multichoiceOptions) {
         const correctOptions = task.multichoiceOptions
           .filter(opt => opt.isCorrect)
@@ -260,7 +153,6 @@ export default function StudentTaskDetailPage() {
         points: activeSubtask.points || 0
       });
 
-      // AUTO-GRADING LOGIC FOR SUBTASKS
       if (activeSubtask.submissionType === 'multichoice' && activeSubtask.multichoiceOptions) {
         const correctOptions = activeSubtask.multichoiceOptions
           .filter(opt => opt.isCorrect)
@@ -379,7 +271,7 @@ export default function StudentTaskDetailPage() {
                                     className={styles.videoWrapper}
                                     style={{
                                       position: 'relative',
-                                      paddingBottom: '56.25%', // Mathematically forces a 16:9 Aspect Ratio
+                                      paddingBottom: '56.25%',
                                       height: 0,
                                       overflow: 'hidden',
                                       borderRadius: '8px',
@@ -418,7 +310,6 @@ export default function StudentTaskDetailPage() {
                             );
                           })}
 
-                          {/* Attached Subtasks */}
                           {tutSubtasks.length > 0 && (
                             <div className={styles.attachedSubtasks} style={{ marginTop: '16px', padding: '16px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
                               <h5 style={{ fontSize: '0.9rem', color: '#a0a0a0', marginBottom: '12px', fontWeight: 600 }}>Required Subtasks for this step:</h5>
@@ -438,7 +329,6 @@ export default function StudentTaskDetailPage() {
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                                           <span style={{ fontWeight: 700, color: '#ffa502', fontSize: '0.9rem' }}>+{sub.points} pts</span>
 
-                                          {/* Check if submitted and NOT rejected */}
                                           {subSubmission && subSubmission.status !== 'rejected' ? (
                                             <span className={`badge ${subSubmission.status === 'approved' ? 'badge-success' : 'badge-warning'}`}>
                                               {subSubmission.status.charAt(0).toUpperCase() + subSubmission.status.slice(1)}
@@ -464,7 +354,6 @@ export default function StudentTaskDetailPage() {
                                         </div>
                                       </div>
 
-                                      {/* Polished Rejection Note Display for Subtask */}
                                       {subSubmission?.status === 'rejected' && subSubmission?.reviewerNote && (
                                         <div style={{ marginTop: '16px', background: 'rgba(255, 71, 87, 0.03)', border: '1px solid rgba(255, 71, 87, 0.2)', borderRadius: '8px', overflow: 'hidden' }}>
                                           <div style={{ background: 'rgba(255, 71, 87, 0.1)', padding: '8px 12px', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#ff4757', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -511,7 +400,6 @@ export default function StudentTaskDetailPage() {
             ) : (
               <form onSubmit={handleSubmit} className={styles.submitForm}>
 
-                {/* Polished Main Task Rejection UI */}
                 {mainSubmission?.status === 'rejected' && (
                   <div style={{ marginBottom: '24px', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(255, 71, 87, 0.3)', boxShadow: '0 4px 12px rgba(255, 71, 87, 0.1)' }}>
                     <div style={{ background: 'rgba(255, 71, 87, 0.15)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '8px', color: '#ff4757', fontWeight: 600 }}>
@@ -535,8 +423,6 @@ export default function StudentTaskDetailPage() {
 
                 <div className="input-group">
                   <label style={{ marginBottom: '8px', display: 'block' }}>Submission Type</label>
-
-                  {/* BEAUTIFUL CUSTOM DROPDOWN COMPONENT */}
                   <CustomDropdown
                     value={submissionType}
                     options={task.submissionTypes?.map(type => SUBMISSION_TYPE_CONFIG.find(c => c.value === type) || { value: type, label: type }) || []}
@@ -545,8 +431,6 @@ export default function StudentTaskDetailPage() {
                       setSubmissionContent(val === 'multichoice' ? [] : '');
                     }}
                   />
-                  {/* ------------------------------------ */}
-
                 </div>
 
                 <div className={styles.editorArea}>
