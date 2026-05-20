@@ -7,6 +7,7 @@ const NodeNetwork = dynamic(() => import('./NodeNetwork'), { ssr: false });
 const AuroraBorealis = dynamic(() => import('./AuroraBorealis'), { ssr: false });
 const CircuitBoard = dynamic(() => import('./CircuitBoard'), { ssr: false });
 const BlueprintGrid = dynamic(() => import('./BlueprintGrid'), { ssr: false });
+const AntigravityDots = dynamic(() => import('./AntigravityDots'), { ssr: false });
 
 const BACKGROUND_MAP = {
   code_rain: CodeRain,
@@ -26,11 +27,19 @@ const COLOR_MAP = {
 
 /**
  * Renders the appropriate society-themed animated background
- * @param {string} society - Society identifier
+ * @param {string|string[]} society - Society identifier or array of identifiers
  * @param {string} customColor - Override default color
  */
 export default function SocietyBackground({ society, customColor }) {
-  if (!society) return null;
+  if (!society || (Array.isArray(society) && society.length === 0)) return null;
+
+  // Render Antigravity effect for multiple societies
+  if (Array.isArray(society) && society.length > 1) {
+    return <AntigravityDots color={customColor || '#6C63FF'} />;
+  }
+
+  // Handle single society
+  const singleSociety = Array.isArray(society) ? society[0] : society;
 
   const SOCIETY_TO_EFFECT = {
     computer_society: 'code_rain',
@@ -40,7 +49,7 @@ export default function SocietyBackground({ society, customColor }) {
     industrial_applications: 'blueprint_grid',
   };
 
-  const effect = SOCIETY_TO_EFFECT[society];
+  const effect = SOCIETY_TO_EFFECT[singleSociety];
   if (!effect) return null;
 
   const Component = BACKGROUND_MAP[effect];

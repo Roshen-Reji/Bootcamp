@@ -8,6 +8,7 @@ import { TASK_LEVELS } from '@/shared/constants';
 import SocietyBackground from '@/components/backgrounds/SocietyBackground';
 import GlassCard from '@/components/ui/GlassCard';
 import Modal from '@/components/ui/Modal';
+import CustomDropdown from '@/components/ui/CustomDropdown';
 import styles from './page.module.css';
 
 export default function StudentsPage() {
@@ -98,7 +99,6 @@ export default function StudentsPage() {
     }
   };
 
-  // ADDED: Function to update the student's level instantly
   const handleLevelUpdate = async (studentId, newLevel) => {
     try {
       await updateStudent(id, studentId, { level: newLevel });
@@ -160,23 +160,18 @@ export default function StudentsPage() {
                       </div>
                     </td>
                     <td>
-                      {/* CHANGED: Swapped static badge for an interactive dropdown */}
-                      <select
-                        className="select"
-                        value={student.level || 'beginner'}
-                        onChange={(e) => handleLevelUpdate(student.uid || student.id, e.target.value)}
-                        style={{
-                          padding: '4px 28px 4px 12px',
-                          fontSize: '0.75rem',
-                          height: 'auto',
-                          borderRadius: 'var(--radius-full)',
-                          width: 'auto'
-                        }}
-                      >
-                        <option value="beginner">Beginner</option>
-                        <option value="intermediate">Intermediate</option>
-                        <option value="advanced">Advanced</option>
-                      </select>
+                      <div style={{ width: '135px' }}>
+                        <CustomDropdown
+                          small={true}
+                          value={student.level || 'beginner'}
+                          onChange={(val) => handleLevelUpdate(student.uid || student.id, val)}
+                          options={[
+                            { value: 'beginner', label: 'Beginner' },
+                            { value: 'intermediate', label: 'Intermediate' },
+                            { value: 'advanced', label: 'Advanced' }
+                          ]}
+                        />
+                      </div>
                     </td>
                     <td>
                       <span className={styles.volunteerName}>
@@ -221,29 +216,41 @@ export default function StudentsPage() {
           </div>
 
           <div className="input-group">
-            <label>Level</label>
-            <select className="select" value={form.level} onChange={e => setForm({ ...form, level: e.target.value })}>
-              <option value={TASK_LEVELS.BEGINNER}>Beginner</option>
-              <option value={TASK_LEVELS.INTERMEDIATE}>Intermediate</option>
-              <option value={TASK_LEVELS.ADVANCED}>Advanced</option>
-            </select>
+            <label style={{ display: 'block', marginBottom: '8px' }}>Level</label>
+            <CustomDropdown
+              value={form.level}
+              onChange={(val) => setForm({ ...form, level: val })}
+              options={[
+                { value: TASK_LEVELS.BEGINNER, label: 'Beginner' },
+                { value: TASK_LEVELS.INTERMEDIATE, label: 'Intermediate' },
+                { value: TASK_LEVELS.ADVANCED, label: 'Advanced' }
+              ]}
+            />
           </div>
 
           <div className="input-group">
-            <label>Assign Volunteer</label>
-            <select className="select" value={form.volunteerId} onChange={e => setForm({ ...form, volunteerId: e.target.value })}>
-              <option value="">-- Unassigned --</option>
-              {volunteers.map(v => <option key={v.id} value={v.id}>{v.displayName}</option>)}
-            </select>
+            <label style={{ display: 'block', marginBottom: '8px' }}>Assign Volunteer</label>
+            <CustomDropdown
+              value={form.volunteerId}
+              onChange={(val) => setForm({ ...form, volunteerId: val })}
+              options={[
+                { value: '', label: '-- Unassigned --' },
+                ...volunteers.map(v => ({ value: v.id, label: v.displayName }))
+              ]}
+            />
           </div>
 
           {bootcamp.teamConfig?.enabled && (
             <div className="input-group">
-              <label>Assign Team</label>
-              <select className="select" value={form.teamId} onChange={e => setForm({ ...form, teamId: e.target.value })}>
-                <option value="">-- No Team --</option>
-                {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-              </select>
+              <label style={{ display: 'block', marginBottom: '8px' }}>Assign Team</label>
+              <CustomDropdown
+                value={form.teamId}
+                onChange={(val) => setForm({ ...form, teamId: val })}
+                options={[
+                  { value: '', label: '-- No Team --' },
+                  ...teams.map(t => ({ value: t.id, label: t.name }))
+                ]}
+              />
             </div>
           )}
 
