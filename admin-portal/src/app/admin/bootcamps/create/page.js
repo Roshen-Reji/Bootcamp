@@ -30,12 +30,12 @@ export default function CreateBootcampPage() {
   const { user } = useAuth();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [previewSociety, setPreviewSociety] = useState(null);
+  const [previewSocieties, setPreviewSocieties] = useState([]);
 
   const [form, setForm] = useState({
     name: '',
     description: '',
-    society: '',
+    society: [], // NOW AN ARRAY
     icon: '',
     colorTheme: { primary: '#6C63FF', secondary: '#FF6584', accent: '#00D9FF' },
     teamConfig: { enabled: false, individualSubmissions: true },
@@ -45,18 +45,32 @@ export default function CreateBootcampPage() {
     setForm(prev => ({ ...prev, [key]: value }));
   };
 
-  const selectSociety = (societyId) => {
-    updateForm('society', societyId);
-    const society = SOCIETIES.find(s => s.id === societyId);
-    if (society) {
-      updateForm('icon', society.icon);
-      updateForm('colorTheme', DEFAULT_THEMES[societyId] || form.colorTheme);
+  const toggleSociety = (societyId) => {
+    let currentSocieties = [...form.society];
+
+    // Toggle logic
+    if (currentSocieties.includes(societyId)) {
+      currentSocieties = currentSocieties.filter(id => id !== societyId);
+    } else {
+      currentSocieties.push(societyId);
     }
-    setPreviewSociety(societyId);
+
+    const primarySociety = currentSocieties[0];
+    const icon = currentSocieties.length > 1 ? '🌐' : (SOCIETIES.find(s => s.id === primarySociety)?.icon || '');
+    const theme = primarySociety ? (DEFAULT_THEMES[primarySociety] || form.colorTheme) : { primary: '#6C63FF', secondary: '#FF6584', accent: '#00D9FF' };
+
+    setForm(prev => ({
+      ...prev,
+      society: currentSocieties,
+      icon,
+      colorTheme: theme
+    }));
+
+    setPreviewSocieties(currentSocieties);
   };
 
   const handleSubmit = async () => {
-    if (!form.name || !form.society) return;
+    if (!form.name || form.society.length === 0) return;
     setLoading(true);
     try {
       const id = await createBootcamp({
@@ -76,14 +90,14 @@ export default function CreateBootcampPage() {
     <div className={styles.container}>
       {/* Live background preview */}
       <AnimatePresence>
-        {previewSociety && (
+        {previewSocieties.length > 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <SocietyBackground society={previewSociety} />
+            <SocietyBackground society={previewSocieties} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -104,7 +118,7 @@ export default function CreateBootcampPage() {
 
         {/* Step Indicator */}
         <div className={styles.steps}>
-          {['Details', 'Society', 'Theme', 'Teams'].map((label, i) => (
+          {['Details', 'Societies', 'Theme', 'Teams'].map((label, i) => (
             <button
               key={label}
               className={`${styles.step} ${step === i + 1 ? styles.stepActive : ''} ${step > i + 1 ? styles.stepDone : ''}`}
@@ -161,7 +175,7 @@ export default function CreateBootcampPage() {
                 </div>
                 <div className={styles.stepActions}>
                   <button className="btn btn-primary" onClick={() => setStep(2)} disabled={!form.name}>
-                    Next: Choose Society →
+                    Next: Choose Societies →
                   </button>
                 </div>
               </GlassCard>
@@ -177,21 +191,21 @@ export default function CreateBootcampPage() {
               transition={{ duration: 0.3 }}
             >
               <GlassCard hover={false} padding="xl">
-                <h2 className={styles.stepTitle}>Choose IEEE Society</h2>
+                <h2 className={styles.stepTitle}>Choose IEEE Societies</h2>
                 <p className={styles.stepDesc}>
-                  The society determines the bootcamp&apos;s visual theme and animated background.
+                  Select one or more societies. Choosing multiple unlocks the Antigravity background!
                 </p>
                 <div className={styles.societyGrid}>
                   {SOCIETIES.map((society) => (
                     <motion.button
                       key={society.id}
-                      className={`${styles.societyCard} ${form.society === society.id ? styles.societySelected : ''}`}
-                      onClick={() => selectSociety(society.id)}
+                      className={`${styles.societyCard} ${form.society.includes(society.id) ? styles.societySelected : ''}`}
+                      onClick={() => toggleSociety(society.id)}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       style={{
-                        borderColor: form.society === society.id ? society.color : undefined,
-                        boxShadow: form.society === society.id ? `0 0 20px ${society.color}30` : undefined,
+                        borderColor: form.society.includes(society.id) ? society.color : undefined,
+                        boxShadow: form.society.includes(society.id) ? `0 0 20px ${society.color}30` : undefined,
                       }}
                     >
                       <span className={styles.societyIcon}>{society.icon}</span>
@@ -206,7 +220,7 @@ export default function CreateBootcampPage() {
                 </div>
                 <div className={styles.stepActions}>
                   <button className="btn btn-secondary" onClick={() => setStep(1)}>← Back</button>
-                  <button className="btn btn-primary" onClick={() => setStep(3)} disabled={!form.society}>
+                  <button className="btn btn-primary" onClick={() => setStep(3)} disabled={form.society.length === 0}>
                     Next: Customize Theme →
                   </button>
                 </div>
@@ -265,7 +279,6 @@ export default function CreateBootcampPage() {
                     </div>
                   </div>
                 </div>
-                {/* Theme Preview */}
                 <div className={styles.themePreview}>
                   <h4>Preview</h4>
                   <div className={styles.previewBar}>
@@ -350,7 +363,7 @@ export default function CreateBootcampPage() {
                   <motion.button
                     className="btn btn-primary btn-lg"
                     onClick={handleSubmit}
-                    disabled={loading || !form.name || !form.society}
+                    disabled={loading || !form.name || form.society.length === 0}
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.97 }}
                   >
