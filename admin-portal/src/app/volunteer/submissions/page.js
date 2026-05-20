@@ -29,6 +29,10 @@ export default function VolunteerSubmissions() {
   const [processingId, setProcessingId] = useState(null);
   const [expandedStudentId, setExpandedStudentId] = useState(null);
 
+  const [customPoints, setCustomPoints] = useState({});
+  const [rejectingId, setRejectingId] = useState(null);
+  const [rejectNote, setRejectNote] = useState('');
+
   useEffect(() => {
     if (!user || !user.bootcampId) return;
 
@@ -79,6 +83,10 @@ export default function VolunteerSubmissions() {
     return 'Unknown Task';
   };
 
+  const getMaxPoints = (sub) => {
+    return sub.points !== undefined ? sub.points : (taskMap[sub.taskId]?.points || 10);
+  };
+
   // Filter out submissions only for this volunteer's students
   const myStudentIds = students.map(s => s.uid || s.id);
   const mySubmissions = submissions.filter(s => myStudentIds.includes(s.studentId));
@@ -101,19 +109,21 @@ export default function VolunteerSubmissions() {
     return acc;
   }, {}));
 
-  const handleStatusUpdate = async (sub, newStatus) => {
+  const handleStatusUpdate = async (sub, newStatus, awardedPoints = 0, reviewerNote = null) => {
     if (processingId) return;
     setProcessingId(sub.id);
 
     try {
-      const targetPoints = sub.points !== undefined
-        ? sub.points
-        : (taskMap[sub.taskId]?.points || 10);
-
-      await reviewSubmission(user.bootcampId, sub.id, {
+      const payload = {
         status: newStatus,
-        pointsAwarded: newStatus === 'approved' ? targetPoints : 0
-      });
+        pointsAwarded: newStatus === 'approved' ? awardedPoints : 0
+      };
+
+      if (reviewerNote !== null) {
+        payload.reviewerNote = reviewerNote;
+      }
+
+      await reviewSubmission(user.bootcampId, sub.id, payload);
     } catch (err) {
       console.error(err);
       alert('Failed to update status');
@@ -235,25 +245,77 @@ export default function VolunteerSubmissions() {
 
                         {/* Actions (Approve/Reject) */}
                         {sub.status === 'pending' && (
-                          <div style={{ display: 'flex', gap: '12px', marginTop: '16px', justifyContent: 'flex-end' }}>
-                            <button
-                              className={styles.rejectBtn}
-                              onClick={() => handleStatusUpdate(sub, 'rejected')}
-                              disabled={processingId === sub.id}
-                            >
-                              <XIcon />
-                              <span>Reject</span>
-                            </button>
-                            <button
-                              className={styles.approveBtn}
-                              onClick={() => handleStatusUpdate(sub, 'approved')}
-                              disabled={processingId === sub.id}
-                            >
-                              <CheckIcon />
-                              <span>
-                                {processingId === sub.id ? 'Processing...' : `Approve (+${sub.points !== undefined ? sub.points : (taskMap[sub.taskId]?.points || 10)} pts)`}
-                              </span>
-                            </button>
+                          <div style={{ display: 'flex', gap: '12px', marginTop: '16px', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap' }}>
+                            {rejectingId === sub.id ? (
+                              <div style={{ width: '100%', background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                <label style={{ fontSize: '0.85rem', marginBottom: '8px', display: 'block', opacity: 0.8 }}>Reason for Rejection (Visible to Student)</label>
+                                <textarea
+                                  className="textarea"
+                                  style={{ minHeight: '60px', marginBottom: '12px' }}
+                                  value={rejectNote}
+                                  onChange={(e) => setRejectNote(e.target.value)}
+                                  placeholder="e.g., Please double check your math on step 3..."
+                                />
+                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                                  <button className="btn btn-ghost btn-sm" onClick={() => setRejectingId(null)}>Cancel</button>
+                                  <button
+                                    className={styles.rejectBtn}
+                                    onClick={() => {
+                                      handleStatusUpdate(sub, 'rejected', 0, rejectNote);
+                                      setRejectingId(null);
+                                      setRejectNote('');
+                                    }}
+                                    disabled={processingId === sub.id}
+                                  >
+                                    Confirm Rejection
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <button
+                                  className={styles.rejectBtn}
+                                  onClick={() => {
+                                    setRejectingId(sub.id);
+                                    setRejectNote('');
+                                  }}
+                                  disabled={processingId === sub.id}
+                                >
+                                  <XIcon />
+                                  <span>Reject</span>
+                                </button>
+
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: '6px' }}>
+                                  <span style={{ fontSize: '0.85rem', opacity: 0.8 }}>Points:</span>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max={getMaxPoints(sub)}
+                                    value={customPoints[sub.id] !== undefined ? customPoints[sub.id] : getMaxPoints(sub)}
+                                    onChange={(e) => {
+                                      const val = Math.min(Math.max(0, parseInt(e.target.value) || 0), getMaxPoints(sub));
+                                      setCustomPoints(prev => ({ ...prev, [sub.id]: val }));
+                                    }}
+                                    style={{ width: '60px', padding: '4px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', borderRadius: '4px' }}
+                                  />
+                                  <span style={{ fontSize: '0.85rem', opacity: 0.6 }}>/ {getMaxPoints(sub)}</span>
+                                </div>
+
+                                <button
+                                  className={styles.approveBtn}
+                                  onClick={() => {
+                                    const pts = customPoints[sub.id] !== undefined ? customPoints[sub.id] : getMaxPoints(sub);
+                                    handleStatusUpdate(sub, 'approved', pts);
+                                  }}
+                                  disabled={processingId === sub.id}
+                                >
+                                  <CheckIcon />
+                                  <span>
+                                    {processingId === sub.id ? 'Processing...' : `Approve`}
+                                  </span>
+                                </button>
+                              </>
+                            )}
                           </div>
                         )}
 

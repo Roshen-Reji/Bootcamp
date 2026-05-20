@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { getBootcamp, subscribeToTutorials, subscribeToSubtasks, createSubmission, subscribeToSubmissions, reviewSubmission } from '@/lib/db';
 import { db } from '@/lib/firebase';
@@ -23,6 +23,121 @@ const getYouTubeEmbedUrl = (url) => {
   }
   return url;
 };
+
+// --- NEW: Polished Custom Dropdown Configuration & Component ---
+const SUBMISSION_TYPE_CONFIG = [
+  { value: 'code', label: 'Code Editor', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg> },
+  { value: 'link', label: 'URL Link', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg> },
+  { value: 'text', label: 'Text Response', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="21" y1="10" x2="3" y2="10"></line><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="14" x2="3" y2="14"></line><line x1="21" y1="18" x2="3" y2="18"></line></svg> },
+  { value: 'video', label: 'Video Submission', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg> },
+  { value: 'image', label: 'Image Submission', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg> },
+  { value: 'multichoice', label: 'Multiple Choice', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg> },
+];
+
+const CustomDropdown = ({ value, options, onChange }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const currentOption = options.find(o => o.value === value) || options[0];
+
+  return (
+    <div ref={dropdownRef} style={{ position: 'relative', width: '100%', zIndex: isOpen ? 50 : 1 }}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          width: '100%',
+          padding: '12px 16px',
+          background: 'rgba(255, 255, 255, 0.05)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          borderRadius: '8px',
+          color: '#fff',
+          fontSize: '0.95rem',
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+          boxShadow: isOpen ? '0 0 0 2px rgba(108, 99, 255, 0.4)' : 'none',
+          outline: 'none'
+        }}
+      >
+        <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ color: 'var(--color-primary, #6c63ff)' }}>{currentOption?.icon}</span>
+          {currentOption?.label || value}
+        </span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease', opacity: 0.6 }}>
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+            transition={{ duration: 0.15, ease: 'easeOut' }}
+            style={{
+              position: 'absolute',
+              top: 'calc(100% + 8px)',
+              left: 0,
+              right: 0,
+              background: 'rgba(20, 25, 35, 0.95)',
+              backdropFilter: 'blur(16px)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '8px',
+              overflow: 'hidden',
+              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.1)'
+            }}
+          >
+            {options.map((opt) => (
+              <div
+                key={opt.value}
+                onClick={() => {
+                  onChange(opt.value);
+                  setIsOpen(false);
+                }}
+                style={{
+                  padding: '12px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  cursor: 'pointer',
+                  background: value === opt.value ? 'rgba(108, 99, 255, 0.15)' : 'transparent',
+                  color: value === opt.value ? '#fff' : '#cbd5e1',
+                  transition: 'background 0.2s',
+                  fontSize: '0.95rem'
+                }}
+                onMouseEnter={(e) => { if (value !== opt.value) e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)' }}
+                onMouseLeave={(e) => { if (value !== opt.value) e.currentTarget.style.background = 'transparent' }}
+              >
+                <span style={{ color: value === opt.value ? 'var(--color-primary, #6c63ff)' : '#94a3b8' }}>
+                  {opt.icon}
+                </span>
+                <span style={{ fontWeight: value === opt.value ? 600 : 400 }}>{opt.label}</span>
+                {value === opt.value && (
+                  <svg style={{ marginLeft: 'auto', color: 'var(--color-primary, #6c63ff)' }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                )}
+              </div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+// --------------------------------------------------------
 
 export default function StudentTaskDetailPage() {
   const { taskId } = useParams();
@@ -76,6 +191,7 @@ export default function StudentTaskDetailPage() {
     const unsubSub = subscribeToSubtasks(user.bootcampId, taskId, setSubtasks);
 
     const unsubSubs = subscribeToSubmissions(user.bootcampId, (allSubs) => {
+      // Submissions are sorted by submittedAt desc, so the first match is the latest submission
       setSubmissions(allSubs.filter(s => s.studentId === user.uid && s.taskId === taskId));
     });
 
@@ -115,7 +231,7 @@ export default function StudentTaskDetailPage() {
         if (isCorrect) {
           await reviewSubmission(user.bootcampId, subId, { status: 'approved', pointsAwarded: task.points || 0 });
         } else {
-          await reviewSubmission(user.bootcampId, subId, { status: 'rejected', pointsAwarded: 0 });
+          await reviewSubmission(user.bootcampId, subId, { status: 'rejected', pointsAwarded: 0, reviewerNote: "Auto-graded: Incorrect answer." });
         }
       }
 
@@ -159,7 +275,7 @@ export default function StudentTaskDetailPage() {
         if (isCorrect) {
           await reviewSubmission(user.bootcampId, subId, { status: 'approved', pointsAwarded: activeSubtask.points || 0 });
         } else {
-          await reviewSubmission(user.bootcampId, subId, { status: 'rejected', pointsAwarded: 0 });
+          await reviewSubmission(user.bootcampId, subId, { status: 'rejected', pointsAwarded: 0, reviewerNote: "Auto-graded: Incorrect answer." });
         }
       }
 
@@ -311,36 +427,55 @@ export default function StudentTaskDetailPage() {
                                   const subSubmission = submissions.find(s => s.subtaskId === sub.id);
 
                                   return (
-                                    <div key={sub.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', padding: '2px 6px', background: 'rgba(108, 99, 255, 0.2)', color: 'var(--color-primary)', borderRadius: '4px', fontWeight: 700 }}>
-                                          {sub.submissionType}
-                                        </span>
-                                        <span style={{ fontSize: '0.95rem', fontWeight: 500 }}>{sub.title}</span>
-                                      </div>
-                                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                        <span style={{ fontWeight: 700, color: '#ffa502', fontSize: '0.9rem' }}>+{sub.points} pts</span>
-
-                                        {subSubmission ? (
-                                          <span className={`badge ${subSubmission.status === 'approved' ? 'badge-success' :
-                                            subSubmission.status === 'rejected' ? 'badge-danger' : 'badge-warning'
-                                            }`}>
-                                            {subSubmission.status.charAt(0).toUpperCase() + subSubmission.status.slice(1)}
+                                    <div key={sub.id} style={{ display: 'flex', flexDirection: 'column', padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                          <span style={{ fontSize: '0.7rem', textTransform: 'uppercase', padding: '2px 6px', background: 'rgba(108, 99, 255, 0.2)', color: 'var(--color-primary)', borderRadius: '4px', fontWeight: 700 }}>
+                                            {sub.submissionType}
                                           </span>
-                                        ) : (
-                                          <button
-                                            className="btn btn-primary"
-                                            style={{ padding: '6px 16px', fontSize: '0.8rem', height: 'auto' }}
-                                            onClick={() => {
-                                              setActiveSubtask(sub);
-                                              setSubtaskContent(sub.submissionType === 'multichoice' ? [] : '');
-                                              setModalOpen(true);
-                                            }}
-                                          >
-                                            Submit
-                                          </button>
-                                        )}
+                                          <span style={{ fontSize: '0.95rem', fontWeight: 500 }}>{sub.title}</span>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                          <span style={{ fontWeight: 700, color: '#ffa502', fontSize: '0.9rem' }}>+{sub.points} pts</span>
+
+                                          {/* Check if submitted and NOT rejected */}
+                                          {subSubmission && subSubmission.status !== 'rejected' ? (
+                                            <span className={`badge ${subSubmission.status === 'approved' ? 'badge-success' : 'badge-warning'}`}>
+                                              {subSubmission.status.charAt(0).toUpperCase() + subSubmission.status.slice(1)}
+                                            </span>
+                                          ) : (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                              {subSubmission?.status === 'rejected' && (
+                                                <span className="badge badge-danger">Rejected</span>
+                                              )}
+                                              <button
+                                                className="btn btn-primary"
+                                                style={{ padding: '6px 16px', fontSize: '0.8rem', height: 'auto' }}
+                                                onClick={() => {
+                                                  setActiveSubtask(sub);
+                                                  setSubtaskContent(sub.submissionType === 'multichoice' ? [] : '');
+                                                  setModalOpen(true);
+                                                }}
+                                              >
+                                                {subSubmission?.status === 'rejected' ? 'Resubmit' : 'Submit'}
+                                              </button>
+                                            </div>
+                                          )}
+                                        </div>
                                       </div>
+
+                                      {/* Polished Rejection Note Display for Subtask */}
+                                      {subSubmission?.status === 'rejected' && subSubmission?.reviewerNote && (
+                                        <div style={{ marginTop: '16px', background: 'rgba(255, 71, 87, 0.03)', border: '1px solid rgba(255, 71, 87, 0.2)', borderRadius: '8px', overflow: 'hidden' }}>
+                                          <div style={{ background: 'rgba(255, 71, 87, 0.1)', padding: '8px 12px', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#ff4757', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                                            Feedback on your subtask
+                                          </div>
+                                          <div style={{ padding: '12px', borderLeft: '3px solid #ff4757' }}>
+                                            <p style={{ margin: 0, fontSize: '0.95rem', color: '#f1f5f9', fontStyle: 'italic' }}>"{subSubmission.reviewerNote}"</p>
+                                          </div>
+                                        </div>
+                                      )}
                                     </div>
                                   );
                                 })}
@@ -376,34 +511,42 @@ export default function StudentTaskDetailPage() {
             ) : (
               <form onSubmit={handleSubmit} className={styles.submitForm}>
 
+                {/* Polished Main Task Rejection UI */}
                 {mainSubmission?.status === 'rejected' && (
-                  <div style={{ padding: '12px', background: 'rgba(255, 71, 87, 0.1)', border: '1px solid #ff4757', color: '#ff4757', borderRadius: '8px', marginBottom: '16px', fontSize: '0.9rem' }}>
-                    <strong>Note:</strong> Your previous submission was incorrect/rejected. Please try again.
+                  <div style={{ marginBottom: '24px', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(255, 71, 87, 0.3)', boxShadow: '0 4px 12px rgba(255, 71, 87, 0.1)' }}>
+                    <div style={{ background: 'rgba(255, 71, 87, 0.15)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '8px', color: '#ff4757', fontWeight: 600 }}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                      Submission Needs Revision
+                    </div>
+                    <div style={{ padding: '16px', background: 'rgba(0, 0, 0, 0.2)' }}>
+                      <p style={{ margin: '0 0 16px 0', fontSize: '0.95rem', color: '#e2e8f0' }}>Your previous attempt was reviewed and marked as incorrect. Please review the feedback below and try again.</p>
+                      {mainSubmission.reviewerNote && (
+                        <div style={{ background: 'rgba(255, 255, 255, 0.03)', borderLeft: '3px solid #ff4757', padding: '16px', borderRadius: '0 6px 6px 0' }}>
+                          <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#ff4757', marginBottom: '8px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                            Note from your Reviewer
+                          </div>
+                          <p style={{ margin: 0, fontSize: '1rem', lineHeight: '1.5', color: '#fff', fontStyle: 'italic' }}>"{mainSubmission.reviewerNote}"</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
                 <div className="input-group">
-                  <label>Submission Type</label>
-                  <select
-                    className="select"
+                  <label style={{ marginBottom: '8px', display: 'block' }}>Submission Type</label>
+
+                  {/* BEAUTIFUL CUSTOM DROPDOWN COMPONENT */}
+                  <CustomDropdown
                     value={submissionType}
-                    onChange={(e) => {
-                      setSubmissionType(e.target.value);
-                      setSubmissionContent(e.target.value === 'multichoice' ? [] : '');
+                    options={task.submissionTypes?.map(type => SUBMISSION_TYPE_CONFIG.find(c => c.value === type) || { value: type, label: type }) || []}
+                    onChange={(val) => {
+                      setSubmissionType(val);
+                      setSubmissionContent(val === 'multichoice' ? [] : '');
                     }}
-                  >
-                    {task.submissionTypes?.map(type => (
-                      <option key={type} value={type}>
-                        {type === 'code' ? 'Code Editor' :
-                          type === 'link' ? 'URL Link' :
-                            type === 'text' ? 'Text Response' :
-                              type === 'video' ? 'Video Submission' :
-                                type === 'image' ? 'Image Submission' :
-                                  type === 'multichoice' ? 'Multiple Choice' :
-                                    type}
-                      </option>
-                    ))}
-                  </select>
+                  />
+                  {/* ------------------------------------ */}
+
                 </div>
 
                 <div className={styles.editorArea}>
