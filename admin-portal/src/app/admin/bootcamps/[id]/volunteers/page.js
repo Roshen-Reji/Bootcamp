@@ -68,6 +68,23 @@ export default function VolunteersPage() {
     }
   };
 
+  const handleDelete = async (uid, name) => {
+    if (!confirm(`Are you sure you want to remove ${name} from this bootcamp?`)) return;
+    try {
+      const res = await fetch(`/api/users?uid=${uid}&bootcampId=${id}&role=volunteer`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to delete volunteer');
+      }
+      // UI will update automatically due to subscribeToVolunteers listener
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
+    }
+  };
+
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -204,6 +221,16 @@ export default function VolunteersPage() {
                   <div className={styles.volInfo}>
                     <h3 className={styles.volName}>{vol.displayName}</h3>
                     <p className={styles.volEmail}>{vol.email}</p>
+                  </div>
+                  <div style={{ marginLeft: 'auto' }}>
+                    <button 
+                      className="btn btn-ghost btn-sm" 
+                      style={{ color: '#ff4757', padding: '6px' }}
+                      onClick={() => handleDelete(vol.uid, vol.displayName)}
+                      title="Remove Volunteer"
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </button>
                   </div>
                 </div>
               </GlassCard>

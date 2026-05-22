@@ -10,12 +10,23 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Create user in Firebase Auth
-    const userRecord = await authAdmin.createUser({
-      email,
-      password,
-      displayName,
-    });
+    let userRecord;
+    try {
+      // Create user in Firebase Auth
+      userRecord = await authAdmin.createUser({
+        email,
+        password,
+        displayName,
+      });
+    } catch (err) {
+      if (err.code === 'auth/email-already-exists') {
+        userRecord = await authAdmin.getUserByEmail(email);
+        // Optionally update their password if provided? The user might just want to add them.
+        // We'll leave the password alone since they already have an account.
+      } else {
+        throw err;
+      }
+    }
 
     const uid = userRecord.uid;
 
@@ -33,7 +44,7 @@ export async function POST(request) {
     if (level) userData.level = level;
 
     // Root users collection for auth routing
-    await dbAdmin.collection('users').doc(uid).set(userData);
+    await dbAdmin.collection('users').doc(uid).set(userData, { merge: true });
 
     // Specific bootcamp subcollections
     if (bootcampId) {
@@ -43,7 +54,7 @@ export async function POST(request) {
           email,
           displayName,
           createdAt: new Date(),
-        });
+        }, { merge: true });
       } else if (role === 'student') {
         await dbAdmin.collection('bootcamps').doc(bootcampId).collection('students').doc(uid).set({
           uid,
@@ -54,7 +65,7 @@ export async function POST(request) {
           level: level || 'beginner',
           totalPoints: 0,
           createdAt: new Date(),
-        });
+        }, { merge: true });
         
         // Init leaderboard entry
         await dbAdmin.collection('bootcamps').doc(bootcampId).collection('leaderboard').doc(uid).set({
@@ -63,7 +74,7 @@ export async function POST(request) {
           teamId: teamId || null,
           totalPoints: 0,
           lastUpdated: new Date(),
-        });
+        }, { merge: true });
       }
     }
 
@@ -73,3 +84,29 @@ export async function POST(request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
+export async function DELETE(request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const uid = searchParams.get('uid');
+    const bootcampId = searchParams.get('bootcampId');
+    const role = searchParams.get('role');
+
+    if (!uid || !bootcampId || !role) {
+      return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
+    }
+
+    if (role === 'volunteer') {
+      await dbAdmin.collection('bootcamps').doc(bootcampId).collection('volunteers').doc(uid).delete();
+    } else if (role === 'student') {
+      await dbAdmin.collection('bootcamps').doc(bootcampId).collection('students').doc(uid).delete();
+      await dbAdmin.collection('bootcamps').doc(bootcampId).collection('leaderboard').doc(uid).delete();
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting user from bootcamp:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+

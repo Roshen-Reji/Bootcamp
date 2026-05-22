@@ -136,6 +136,23 @@ export default function VolunteerStudents() {
     setPasswordModalOpen(true);
   };
 
+  const handleDelete = async (uid, name) => {
+    if (!confirm(`Are you sure you want to remove ${name} from this bootcamp?`)) return;
+    try {
+      const res = await fetch(`/api/users?uid=${uid}&bootcampId=${user.bootcampId}&role=student`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to delete student');
+      }
+      // UI updates automatically via subscription
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
+    }
+  };
+
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -281,16 +298,24 @@ export default function VolunteerStudents() {
                       <option value="intermediate">Intermediate</option>
                       <option value="advanced">Advanced</option>
                     </select>
-                    <button
-                      onClick={() => openPasswordModal(student)}
-                      className="btn btn-secondary btn-sm"
-                      style={{ marginLeft: '8px' }}
-                    >
-                      Change Pass
-                    </button>
+                      <button
+                        onClick={() => openPasswordModal(student)}
+                        className="btn btn-secondary btn-sm"
+                        style={{ marginLeft: '8px', padding: '4px 8px' }}
+                      >
+                        Key
+                      </button>
+                      <button 
+                        className="btn btn-ghost btn-sm" 
+                        style={{ color: '#ff4757', marginLeft: '8px', padding: '4px 8px' }}
+                        onClick={() => handleDelete(student.uid || student.id, student.displayName || student.name)}
+                        title="Remove Student"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
             </div>
           )}
         </GlassCard>

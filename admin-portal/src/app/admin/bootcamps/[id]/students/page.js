@@ -120,6 +120,15 @@ export default function StudentsPage() {
     }
   };
 
+  const handleVolunteerUpdate = async (studentId, newVolunteerId) => {
+    try {
+      await updateStudent(id, studentId, { volunteerId: newVolunteerId });
+    } catch (err) {
+      console.error(err);
+      alert("Failed to assign volunteer");
+    }
+  };
+
   const handleChangePassword = async (e) => {
     e.preventDefault();
     if (!selectedStudentForPassword || !newPassword) return;
@@ -152,6 +161,23 @@ export default function StudentsPage() {
     setSelectedStudentForPassword(student);
     setNewPassword('');
     setPasswordModalOpen(true);
+  };
+
+  const handleDelete = async (uid, name) => {
+    if (!confirm(`Are you sure you want to remove ${name} from this bootcamp?`)) return;
+    try {
+      const res = await fetch(`/api/users?uid=${uid}&bootcampId=${id}&role=student`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to delete student');
+      }
+      // UI updates automatically via subscription
+    } catch (error) {
+      console.error(error);
+      alert(error.message);
+    }
   };
 
   const handleFileUpload = (e) => {
@@ -314,9 +340,17 @@ export default function StudentsPage() {
                       </div>
                     </td>
                     <td>
-                      <span className={styles.volunteerName}>
-                        {volunteers.find(v => v.id === student.volunteerId)?.displayName || 'Unassigned'}
-                      </span>
+                      <div style={{ width: '160px' }}>
+                        <CustomDropdown
+                          small={true}
+                          value={student.volunteerId || ''}
+                          onChange={(val) => handleVolunteerUpdate(student.uid || student.id, val)}
+                          options={[
+                            { value: '', label: 'Unassigned' },
+                            ...volunteers.map(v => ({ value: v.id, label: v.displayName }))
+                          ]}
+                        />
+                      </div>
                     </td>
                     {bootcamp.teamConfig?.enabled && (
                       <td>
@@ -331,6 +365,14 @@ export default function StudentsPage() {
                         style={{ marginLeft: '12px', padding: '4px 8px' }}
                       >
                         Key
+                      </button>
+                      <button 
+                        className="btn btn-ghost btn-sm" 
+                        style={{ color: '#ff4757', marginLeft: '8px', padding: '4px 8px' }}
+                        onClick={() => handleDelete(student.uid || student.id, student.displayName)}
+                        title="Remove Student"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                       </button>
                     </td>
                   </tr>
