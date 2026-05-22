@@ -7,6 +7,8 @@ import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from './firebase';
@@ -18,6 +20,23 @@ export async function loginUser(email, password) {
   const userCredential = await signInWithEmailAndPassword(auth, email, password);
   const userData = await getUserProfile(userCredential.user.uid);
   return { ...userCredential.user, ...userData };
+}
+
+/**
+ * Sign in with Google Popup
+ */
+export async function loginWithGoogle() {
+  const provider = new GoogleAuthProvider();
+  const result = await signInWithPopup(auth, provider);
+  const userData = await getUserProfile(result.user.uid);
+  
+  // If the user profile doesn't exist, they are not registered as an admin/volunteer
+  if (!userData) {
+    await signOut(auth);
+    throw new Error('No registered admin or volunteer account found for this Google email.');
+  }
+  
+  return { ...result.user, ...userData };
 }
 
 /**

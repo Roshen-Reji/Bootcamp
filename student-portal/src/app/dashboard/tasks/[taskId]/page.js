@@ -13,6 +13,7 @@ import SocietyBackground from '@/components/backgrounds/SocietyBackground';
 import GlassCard from '@/components/ui/GlassCard';
 import Modal from '@/components/ui/Modal';
 import CustomDropdown from '@/components/ui/CustomDropdown';
+import { Lock, Unlock, ChevronUp, ChevronDown } from 'lucide-react';
 import styles from './page.module.css';
 
 const getYouTubeEmbedUrl = (url) => {
@@ -51,10 +52,16 @@ export default function StudentTaskDetailPage() {
   const [submissionContent, setSubmissionContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  
   const [activeSubtask, setActiveSubtask] = useState(null);
   const [isModalOpen, setModalOpen] = useState(false);
   const [subtaskContent, setSubtaskContent] = useState('');
   const [submittingSubtask, setSubmittingSubtask] = useState(false);
+
+  
+  // New States
+  const [activeTab, setActiveTab] = useState('learning'); // 'learning' or 'submission'
+  const [expandedTutorials, setExpandedTutorials] = useState({});
 
   useEffect(() => {
     if (!user?.bootcampId) return undefined;
@@ -171,8 +178,7 @@ export default function StudentTaskDetailPage() {
       setSubmittingSubtask(false);
     }
   };
-
-  const renderSubmissionField = ({ type, value, onChange, options, rows = 8 }) => {
+const renderSubmissionField = ({ type, value, onChange, options, rows = 8 }) => {
     if (type === 'code') {
       return (
         <div className={styles.monacoWrapper}>
@@ -292,11 +298,20 @@ export default function StudentTaskDetailPage() {
 
   if (!bootcamp || !task) return null;
 
+  
   const mainSubmission = submissions.find(s => !s.subtaskId);
   const isMainTaskLocked = mainSubmission?.status === 'pending' || mainSubmission?.status === 'approved';
   const isMainDisabled = submitting || isEmptySubmission(submissionContent);
   const isSubDisabled = submittingSubtask || isEmptySubmission(subtaskContent);
   const submissionOptions = task.submissionTypes?.map(type => SUBMISSION_TYPE_CONFIG.find(c => c.value === type) || { value: type, label: type }) || [];
+
+  // Calculate 80% completion gate
+  const completedSubtasks = submissions.filter(s => s.subtaskId && s.status !== 'rejected').length;
+  const totalSubtasks = subtasks.length;
+  const completionRatio = totalSubtasks === 0 ? 1 : completedSubtasks / totalSubtasks;
+  const completionPercentage = Math.round(completionRatio * 100);
+  const canSubmitMainTask = completionRatio >= 0.8;
+
 
   return (
     <div className={styles.container}>
@@ -312,8 +327,27 @@ export default function StudentTaskDetailPage() {
         </div>
       </div>
 
-      <div className={styles.grid}>
-        <div className={styles.mainCol}>
+      
+      <div className={styles.tabsContainer}>
+        <button 
+          className={`${styles.tabBtn} ${activeTab === 'learning' ? styles.activeTab : ''}`} 
+          onClick={() => setActiveTab('learning')}
+        >
+          Learning Path ({completionPercentage}%)
+        </button>
+        <button 
+          className={`${styles.tabBtn} ${activeTab === 'submission' ? styles.activeTab : ''}`} 
+          onClick={() => setActiveTab('submission')}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            Final Task Submission
+            {canSubmitMainTask ? <Unlock size={16} /> : <Lock size={16} />}
+          </div>
+        </button>
+      </div>
+
+      <div className={styles.tabContent}>
+        {activeTab === 'learning' && (
           <GlassCard hover={false} padding="lg" className={styles.taskShell}>
             <section className={styles.taskOverview}>
               <span className={styles.eyebrow}>Task</span>
@@ -332,9 +366,18 @@ export default function StudentTaskDetailPage() {
               <div className={styles.learningHeader}>
                 <div>
                   <span className={styles.eyebrow}>Learning path</span>
-                  <h2 className={styles.sectionTitle}>Tutorials inside this task</h2>
+                  <h2 className={styles.sectionTitle}>Tutorials & Subtasks</h2>
                 </div>
-                <span className="badge">{tutorials.length} tutorials</span>
+                <div style={{ textAlign: 'right' }}>
+                  <span className="badge">{tutorials.length} tutorials</span>
+                  <div style={{ fontSize: '0.8rem', marginTop: '4px', color: 'var(--color-text-secondary)' }}>
+                    {completedSubtasks} / {totalSubtasks} subtasks completed
+                  </div>
+                </div>
+              </div>
+
+              <div className={styles.progressBarWrapper}>
+                <div className={styles.progressBar} style={{ width: `${completionPercentage}%` }}></div>
               </div>
 
               {tutorials.length === 0 ? (
@@ -343,72 +386,82 @@ export default function StudentTaskDetailPage() {
                 <div className={styles.tutorialList}>
                   {tutorials.map((tutorial, index) => {
                     const tutorialSubtasks = subtasks.filter(subtask => subtask.tutorialId === tutorial.id);
+                    const isExpanded = expandedTutorials[tutorial.id];
 
                     return (
-                      <article key={tutorial.id} className={styles.tutorialItem}>
-                        <div className={styles.tutorialHeader}>
-                          <span className={styles.stepNum}>{index + 1}</span>
-                          <div>
-                            <h3>{tutorial.title}</h3>
-                            {tutorial.description && <p>{tutorial.description}</p>}
+                      <article key={tutorial.id} className={`${styles.tutorialItem} ${isExpanded ? styles.expanded : ''}`}>
+                        <div className={styles.tutorialHeader} onClick={() => setExpandedTutorials(prev => ({ ...prev, [tutorial.id]: !prev[tutorial.id] }))} style={{ cursor: 'pointer' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <span className={styles.stepNum}>{index + 1}</span>
+                            <div>
+                              <h3>{tutorial.title}</h3>
+                              {tutorial.description && <p>{tutorial.description}</p>}
+                            </div>
+                          </div>
+                          <div className={styles.expandIcon}>
+                            {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                           </div>
                         </div>
 
-                        {renderTutorialContent(tutorial.content)}
+                        {isExpanded && (
+                          <div className={styles.tutorialBody}>
+                            {renderTutorialContent(tutorial.content)}
 
-                        <div className={styles.subtasksPanel}>
-                          <div className={styles.subtasksHeader}>
-                            <h4>Subtasks in this tutorial</h4>
-                            <span>{tutorialSubtasks.length}</span>
-                          </div>
+                            <div className={styles.subtasksPanel}>
+                              <div className={styles.subtasksHeader}>
+                                <h4>Subtasks in this tutorial</h4>
+                                <span>{tutorialSubtasks.length}</span>
+                              </div>
 
-                          {tutorialSubtasks.length === 0 ? (
-                            <p className={styles.emptySubtasks}>No subtasks attached to this tutorial.</p>
-                          ) : (
-                            <div className={styles.subtaskList}>
-                              {tutorialSubtasks.map((subtask) => {
-                                const subSubmission = submissions.find(s => s.subtaskId === subtask.id);
-                                const subLocked = subSubmission && subSubmission.status !== 'rejected';
+                              {tutorialSubtasks.length === 0 ? (
+                                <p className={styles.emptySubtasks}>No subtasks attached to this tutorial.</p>
+                              ) : (
+                                <div className={styles.subtaskList}>
+                                  {tutorialSubtasks.map((subtask) => {
+                                    const subSubmission = submissions.find(s => s.subtaskId === subtask.id);
+                                    const subLocked = subSubmission && subSubmission.status !== 'rejected';
 
-                                return (
-                                  <div key={subtask.id} className={styles.subtaskItem}>
-                                    <div className={styles.subtaskTop}>
-                                      <div className={styles.subtaskInfo}>
-                                        <span className={styles.subtaskType}>{subtask.submissionType || 'link'}</span>
-                                        <div>
-                                          <h5>{subtask.title}</h5>
-                                          {subtask.description && <p>{subtask.description}</p>}
+                                    return (
+                                      <div key={subtask.id} className={styles.subtaskItem}>
+                                        <div className={styles.subtaskTop}>
+                                          <div className={styles.subtaskInfo}>
+                                            <span className={styles.subtaskType}>{subtask.submissionType || 'link'}</span>
+                                            <div>
+                                              <h5>{subtask.title}</h5>
+                                              {subtask.description && <p>{subtask.description}</p>}
+                                            </div>
+                                          </div>
+                                          <div className={styles.subtaskActions}>
+                                            <span className={styles.subtaskPoints}>+{subtask.points || 0} pts</span>
+                                            {subLocked ? (
+                                              <span className={`badge ${subSubmission.status === 'approved' ? 'badge-success' : 'badge-warning'}`}>
+                                                {subSubmission.status}
+                                              </span>
+                                            ) : (
+                                              <>
+                                                {subSubmission?.status === 'rejected' && <span className="badge badge-danger">Rejected</span>}
+                                                <button className="btn btn-primary btn-sm" onClick={() => openSubtaskModal(subtask)}>
+                                                  {subSubmission?.status === 'rejected' ? 'Resubmit' : 'Submit'}
+                                                </button>
+                                              </>
+                                            )}
+                                          </div>
                                         </div>
-                                      </div>
-                                      <div className={styles.subtaskActions}>
-                                        <span className={styles.subtaskPoints}>+{subtask.points || 0} pts</span>
-                                        {subLocked ? (
-                                          <span className={`badge ${subSubmission.status === 'approved' ? 'badge-success' : 'badge-warning'}`}>
-                                            {subSubmission.status}
-                                          </span>
-                                        ) : (
-                                          <>
-                                            {subSubmission?.status === 'rejected' && <span className="badge badge-danger">Rejected</span>}
-                                            <button className="btn btn-primary btn-sm" onClick={() => openSubtaskModal(subtask)}>
-                                              {subSubmission?.status === 'rejected' ? 'Resubmit' : 'Submit'}
-                                            </button>
-                                          </>
+
+                                        {subSubmission?.reviewerNote && (
+                                          <div className={`${styles.subtaskNote} ${subSubmission.status === 'rejected' ? styles.noteRejected : styles.noteApproved}`}>
+                                            <strong>Reviewer note</strong>
+                                            <p>{subSubmission.reviewerNote}</p>
+                                          </div>
                                         )}
                                       </div>
-                                    </div>
-
-                                    {subSubmission?.reviewerNote && (
-                                      <div className={`${styles.subtaskNote} ${subSubmission.status === 'rejected' ? styles.noteRejected : styles.noteApproved}`}>
-                                        <strong>Reviewer note</strong>
-                                        <p>{subSubmission.reviewerNote}</p>
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
+                                    );
+                                  })}
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
+                          </div>
+                        )}
                       </article>
                     );
                   })}
@@ -416,13 +469,28 @@ export default function StudentTaskDetailPage() {
               )}
             </section>
           </GlassCard>
-        </div>
+        )}
 
-        <div className={styles.sideCol}>
+        {activeTab === 'submission' && (
           <GlassCard hover={false} padding="lg" className={styles.submissionCard}>
             <h3 className={styles.sectionTitle}>Submit Final Task</h3>
-
-            {isMainTaskLocked ? (
+            
+            {!canSubmitMainTask ? (
+              <div className={styles.lockedState}>
+                <div className={styles.lockedIcon}>
+                  <Lock size={48} strokeWidth={1.5} />
+                </div>
+                <h4>Submission Locked</h4>
+                <p>You have completed {completionPercentage}% of the required tutorials and subtasks.</p>
+                <p>You must reach at least 80% completion before you can submit the final task.</p>
+                <div className={styles.progressBarWrapper} style={{ marginTop: '20px', maxWidth: '300px', margin: '20px auto' }}>
+                  <div className={styles.progressBar} style={{ width: `${completionPercentage}%`, background: '#ff4757' }}></div>
+                </div>
+                <button className="btn btn-primary mt-4" onClick={() => setActiveTab('learning')}>
+                  Return to Learning Path
+                </button>
+              </div>
+            ) : isMainTaskLocked ? (
               <div className={styles.successState}>
                 <div className={styles.successIcon}>
                   <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke={mainSubmission.status === 'approved' ? '#2ecc71' : '#f1c40f'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
@@ -504,10 +572,9 @@ export default function StudentTaskDetailPage() {
               </form>
             )}
           </GlassCard>
-        </div>
+        )}
       </div>
-
-      <Modal isOpen={isModalOpen} onClose={() => setModalOpen(false)} title={`Submit: ${activeSubtask?.title || 'Subtask'}`}>
+<Modal isOpen={isModalOpen} onClose={() => setModalOpen(false)} title={`Submit: ${activeSubtask?.title || 'Subtask'}`}>
         <form onSubmit={handleSubtaskSubmit} className={styles.modalForm}>
           <div className={styles.editorArea}>
             {renderSubmissionField({

@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { getBootcamp, subscribeToStudents, subscribeToVolunteers, subscribeToTeams, getTeams, createTeam, updateStudent } from '@/lib/db';
 import { TASK_LEVELS } from '@/shared/constants';
+import * as XLSX from 'xlsx';
 import SocietyBackground from '@/components/backgrounds/SocietyBackground';
 import GlassCard from '@/components/ui/GlassCard';
 import Modal from '@/components/ui/Modal';
@@ -35,11 +36,16 @@ export default function StudentsPage() {
 
   const [teamForm, setTeamForm] = useState({ name: '' });
 
-  // Password Update State
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [selectedStudentForPassword, setSelectedStudentForPassword] = useState(null);
   const [newPassword, setNewPassword] = useState('');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  // Bulk Upload State
+  const [previewData, setPreviewData] = useState([]);
+  const [isPreviewModalOpen, setPreviewModalOpen] = useState(false);
+  const [isUploadingBatch, setIsUploadingBatch] = useState(false);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     const loadBc = async () => {
@@ -148,6 +154,85 @@ export default function StudentsPage() {
     setPasswordModalOpen(true);
   };
 
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const data = evt.target.result;
+      const workbook = XLSX.read(data, { type: 'binary' });
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      const json = XLSX.utils.sheet_to_json(worksheet);
+
+      const normalizedData = json.map((row, index) => {
+        const rowKeys = Object.keys(row);
+        const emailKey = rowKeys.find(k => k.toLowerCase().includes('email')) || rowKeys[1] || 'Email';
+        const nameKey = rowKeys.find(k => k.toLowerCase().includes('name')) || rowKeys[0] || 'Name';
+        const passwordKey = rowKeys.find(k => k.toLowerCase().includes('password'));
+
+        return {
+          slNo: index + 1,
+          name: row[nameKey] || `Student ${index + 1}`,
+          email: row[emailKey] || '',
+          password: (passwordKey && row[passwordKey]) ? row[passwordKey].toString() : Math.random().toString(36).slice(-8),
+          level: TASK_LEVELS.BEGINNER,
+        };
+      }).filter(row => row.email);
+
+      setPreviewData(normalizedData);
+      setPreviewModalOpen(true);
+    };
+    reader.readAsBinaryString(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removePreviewRow = (index) => {
+    const newData = [...previewData];
+    newData.splice(index, 1);
+    setPreviewData(newData);
+  };
+
+  const handleBatchUpload = async () => {
+    setIsUploadingBatch(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const student of previewData) {
+      try {
+        const res = await fetch('/api/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            displayName: student.name,
+            email: student.email,
+            password: student.password,
+            role: 'student',
+            level: student.level,
+            bootcampId: id,
+            volunteerId: '', // Unassigned
+            teamId: ''
+          }),
+        });
+
+        if (res.ok) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      } catch (e) {
+        console.error("Batch upload error:", e);
+        failCount++;
+      }
+    }
+
+    setIsUploadingBatch(false);
+    setPreviewModalOpen(false);
+    setPreviewData([]);
+    alert(`Batch upload complete! \nSuccessful: ${successCount}\nFailed: ${failCount}`);
+  };
+
   if (!bootcamp) return null;
 
   return (
@@ -163,6 +248,21 @@ export default function StudentsPage() {
           <p className={styles.subtitle}>Manage students for {bootcamp.name}</p>
         </div>
         <div className={styles.actions}>
+          <input
+            type="file"
+            accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, text/plain"
+            onChange={handleFileUpload}
+            style={{ display: 'none' }}
+            ref={fileInputRef}
+          />
+          <button 
+            className="btn btn-secondary" 
+            onClick={() => fileInputRef.current?.click()}
+            style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Bulk Upload
+          </button>
           {bootcamp.teamConfig?.enabled && (
             <button className="btn btn-secondary" onClick={() => setTeamModalOpen(true)}>
               + New Team
@@ -344,6 +444,105 @@ export default function StudentsPage() {
             {isChangingPassword ? 'Updating...' : 'Update Password'}
           </button>
         </form>
+      </Modal>
+
+      {/* Bulk Upload Preview Modal */}
+      <Modal isOpen={isPreviewModalOpen} onClose={() => setPreviewModalOpen(false)} title="Bulk Upload Preview" maxWidth="800px">
+        <div style={{ maxHeight: '60vh', overflowY: 'auto', marginBottom: '16px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', color: 'var(--color-text)' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                <th style={{ padding: '12px 8px' }}>Sl.No</th>
+                <th style={{ padding: '12px 8px' }}>Name</th>
+                <th style={{ padding: '12px 8px' }}>Email Address</th>
+                <th style={{ padding: '12px 8px' }}>Temp Password</th>
+                <th style={{ padding: '12px 8px' }}>Level</th>
+                <th style={{ padding: '12px 8px' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {previewData.map((row, idx) => (
+                <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <td style={{ padding: '12px 8px' }}>{row.slNo}</td>
+                  <td style={{ padding: '12px 8px' }}>
+                    <input 
+                      className="input" 
+                      style={{ padding: '4px 8px' }} 
+                      value={row.name} 
+                      onChange={e => {
+                        const newData = [...previewData];
+                        newData[idx].name = e.target.value;
+                        setPreviewData(newData);
+                      }} 
+                    />
+                  </td>
+                  <td style={{ padding: '12px 8px' }}>
+                    <input 
+                      className="input" 
+                      style={{ padding: '4px 8px' }} 
+                      value={row.email} 
+                      onChange={e => {
+                        const newData = [...previewData];
+                        newData[idx].email = e.target.value;
+                        setPreviewData(newData);
+                      }} 
+                    />
+                  </td>
+                  <td style={{ padding: '12px 8px' }}>
+                    <input 
+                      className="input" 
+                      style={{ padding: '4px 8px' }} 
+                      value={row.password} 
+                      onChange={e => {
+                        const newData = [...previewData];
+                        newData[idx].password = e.target.value;
+                        setPreviewData(newData);
+                      }} 
+                    />
+                  </td>
+                  <td style={{ padding: '12px 8px' }}>
+                    <select
+                      className="select"
+                      style={{ padding: '4px 8px' }}
+                      value={row.level}
+                      onChange={e => {
+                        const newData = [...previewData];
+                        newData[idx].level = e.target.value;
+                        setPreviewData(newData);
+                      }}
+                    >
+                      <option value={TASK_LEVELS.BEGINNER}>Beginner</option>
+                      <option value={TASK_LEVELS.INTERMEDIATE}>Intermediate</option>
+                      <option value={TASK_LEVELS.ADVANCED}>Advanced</option>
+                    </select>
+                  </td>
+                  <td style={{ padding: '12px 8px' }}>
+                    <button 
+                      className="btn btn-ghost btn-sm" 
+                      style={{ color: '#ff4757' }} 
+                      onClick={() => removePreviewRow(idx)}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {previewData.length === 0 && (
+            <p style={{ textAlign: 'center', padding: '20px', color: 'var(--color-text-secondary)' }}>No valid data found or all rows removed.</p>
+          )}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px' }}>
+          <button className="btn btn-ghost" onClick={() => setPreviewModalOpen(false)}>Cancel</button>
+          <button 
+            className="btn btn-primary" 
+            onClick={handleBatchUpload} 
+            disabled={isUploadingBatch || previewData.length === 0}
+          >
+            {isUploadingBatch ? 'Uploading...' : `Add ${previewData.length} Students`}
+          </button>
+        </div>
       </Modal>
     </div>
   );
