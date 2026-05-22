@@ -1,3 +1,4 @@
+// admin-portal/src/app/admin/bootcamps/[id]/tasks/[taskId]/page.js
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -30,7 +31,9 @@ export default function TaskDetailPage() {
   const [selectedTutorialId, setSelectedTutorialId] = useState(null);
 
   const [tutorialForm, setTutorialForm] = useState({ title: '', description: '', content: [{ type: 'link', value: '' }] });
-  const [subtaskForm, setSubtaskForm] = useState({ title: '', description: '', points: 10, submissionType: 'multichoice', multichoiceOptions: [{ text: '', isCorrect: true }] });
+  
+  // Changed default submissionType to 'link'
+  const [subtaskForm, setSubtaskForm] = useState({ title: '', description: '', points: 10, submissionType: 'link', multichoiceOptions: [{ text: '', isCorrect: true }] });
 
   useEffect(() => {
     const loadData = async () => {
@@ -78,7 +81,8 @@ export default function TaskDetailPage() {
         createdBy: user.uid,
       });
       setSubtaskModalOpen(false);
-      setSubtaskForm({ title: '', description: '', points: 10, submissionType: 'multichoice', multichoiceOptions: [{ text: '', isCorrect: true }] });
+      // Changed default back to 'link' on successful save
+      setSubtaskForm({ title: '', description: '', points: 10, submissionType: 'link', multichoiceOptions: [{ text: '', isCorrect: true }] });
     } catch (err) {
       console.error(err);
     }
@@ -220,6 +224,8 @@ export default function TaskDetailPage() {
                               <span className={styles.subIcon}>
                                 {sub.submissionType === 'multichoice' ? (
                                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>
+                                ) : sub.submissionType === 'link' ? (
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
                                 ) : (
                                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>
                                 )}

@@ -1,3 +1,4 @@
+// admin-portal/src/app/admin/bootcamps/[id]/submissions/page.js
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -221,18 +222,38 @@ export default function SubmissionsPage() {
                           </span>
                         </div>
 
+                        {/* Submission Content Display */}
                         <div style={{ padding: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '6px', fontSize: '0.9rem' }}>
                           {['link', 'video', 'image'].includes(sub.type) ? (
-                            <a href={sub.content} target="_blank" rel="noreferrer" className={styles.subLink}>
-                              <LinkIcon />
-                              <span>View Submission ↗</span>
-                            </a>
+                            <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0' }}>
+                              <a href={sub.content} target="_blank" rel="noreferrer" style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '10px',
+                                background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%)',
+                                color: 'white',
+                                padding: '12px 28px',
+                                borderRadius: '9999px',
+                                textDecoration: 'none',
+                                fontWeight: '600',
+                                fontSize: '1rem',
+                                boxShadow: '0 4px 15px rgba(168, 85, 247, 0.4)',
+                                transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                                border: '1px solid rgba(255,255,255,0.1)'
+                              }}>
+                                <LinkIcon />
+                                <span>View Submission ↗</span>
+                              </a>
+                            </div>
                           ) : sub.type === 'code' ? (
                             <pre className={styles.codeBlock}>
                               <code>{sub.content}</code>
                             </pre>
                           ) : (
-                            <p className={styles.subText}>{Array.isArray(sub.content) ? sub.content.join(', ') : sub.content}</p>
+                            <p className={styles.subText}>
+                              {Array.isArray(sub.content) ? sub.content.join(', ') : sub.content}
+                            </p>
                           )}
                         </div>
 

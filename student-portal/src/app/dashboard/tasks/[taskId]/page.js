@@ -1,3 +1,4 @@
+// student-portal/src/app/dashboard/tasks/[taskId]/page.js
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -27,7 +28,6 @@ const getYouTubeEmbedUrl = (url) => {
 const SUBMISSION_TYPE_CONFIG = [
   { value: 'code', label: 'Code Editor', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg> },
   { value: 'link', label: 'URL Link', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg> },
-  { value: 'text', label: 'Text Response', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="21" y1="10" x2="3" y2="10" /><line x1="21" y1="6" x2="3" y2="6" /><line x1="21" y1="14" x2="3" y2="14" /><line x1="21" y1="18" x2="3" y2="18" /></svg> },
   { value: 'video', label: 'Video Submission', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7" /><rect x="1" y="5" width="15" height="14" rx="2" ry="2" /></svg> },
   { value: 'image', label: 'Image Submission', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg> },
   { value: 'multichoice', label: 'Multiple Choice', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg> },
@@ -46,7 +46,8 @@ export default function StudentTaskDetailPage() {
   const [subtasks, setSubtasks] = useState([]);
   const [submissions, setSubmissions] = useState([]);
 
-  const [submissionType, setSubmissionType] = useState('text');
+  // Defaulted to 'link' instead of 'text'
+  const [submissionType, setSubmissionType] = useState('link');
   const [submissionContent, setSubmissionContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -148,7 +149,8 @@ export default function StudentTaskDetailPage() {
       const subId = await createSubmission(user.bootcampId, {
         taskId,
         studentId: user.uid,
-        type: activeSubtask.submissionType || 'text',
+        // Fallback to 'link'
+        type: activeSubtask.submissionType || 'link',
         content: subtaskContent,
         subtaskId: activeSubtask.id,
         subtaskTitle: activeSubtask.title,
@@ -372,7 +374,7 @@ export default function StudentTaskDetailPage() {
                                   <div key={subtask.id} className={styles.subtaskItem}>
                                     <div className={styles.subtaskTop}>
                                       <div className={styles.subtaskInfo}>
-                                        <span className={styles.subtaskType}>{subtask.submissionType || 'text'}</span>
+                                        <span className={styles.subtaskType}>{subtask.submissionType || 'link'}</span>
                                         <div>
                                           <h5>{subtask.title}</h5>
                                           {subtask.description && <p>{subtask.description}</p>}
@@ -427,6 +429,29 @@ export default function StudentTaskDetailPage() {
                 </div>
                 <h4>{mainSubmission.status === 'approved' ? 'Task Completed!' : 'Pending Review!'}</h4>
                 <p>{mainSubmission.status === 'approved' ? 'Great job, you have earned the points for this task.' : 'Your work is pending review by your volunteer.'}</p>
+                {['link', 'video', 'image'].includes(mainSubmission.type) && mainSubmission.content && (
+                  <div style={{ display: 'flex', justifyContent: 'center', margin: '24px 0' }}>
+                    <a href={mainSubmission.content} target="_blank" rel="noreferrer" style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '10px',
+                      background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%)',
+                      color: 'white',
+                      padding: '12px 28px',
+                      borderRadius: '9999px',
+                      textDecoration: 'none',
+                      fontWeight: '600',
+                      fontSize: '1rem',
+                      boxShadow: '0 4px 15px rgba(168, 85, 247, 0.4)',
+                      transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                      border: '1px solid rgba(255,255,255,0.1)'
+                    }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
+                      <span>View Submission ↗</span>
+                    </a>
+                  </div>
+                )}
                 {mainSubmission.reviewerNote && (
                   <div className={styles.reviewerNote}>
                     <strong>Reviewer note</strong>
@@ -486,7 +511,8 @@ export default function StudentTaskDetailPage() {
         <form onSubmit={handleSubtaskSubmit} className={styles.modalForm}>
           <div className={styles.editorArea}>
             {renderSubmissionField({
-              type: activeSubtask?.submissionType || 'text',
+              // Fallback to 'link'
+              type: activeSubtask?.submissionType || 'link',
               value: subtaskContent,
               onChange: setSubtaskContent,
               options: activeSubtask?.multichoiceOptions,
