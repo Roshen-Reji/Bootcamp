@@ -2,6 +2,8 @@
  * IEEE Society Definitions
  * Each society has a unique identity that shapes the bootcamp's visual design.
  */
+import React from 'react';
+import { Laptop, GraduationCap, Code2, Bot, Settings } from 'lucide-react';
 
 export const SOCIETIES = {
   computer_society: {
@@ -9,7 +11,7 @@ export const SOCIETIES = {
     name: 'IEEE Computer Society',
     shortName: 'Computer Society',
     description: 'Advancing the theory and practice of computer science and engineering',
-    icon: '💻',
+    icon: <Laptop size={20} />,
     backgroundEffect: 'code_rain',
     colors: {
       primary: '#0076D6',
@@ -26,7 +28,7 @@ export const SOCIETIES = {
     name: 'IEEE Student Branch',
     shortName: 'Student Branch',
     description: 'Empowering student innovation and professional growth',
-    icon: '🎓',
+    icon: <GraduationCap size={20} />,
     backgroundEffect: 'node_network',
     colors: {
       primary: '#00629B',
@@ -43,7 +45,7 @@ export const SOCIETIES = {
     name: 'IEEE Women In Engineering',
     shortName: 'Women In Engineering',
     description: 'Inspiring, engaging, and advancing women in technology',
-    icon: '👩‍💻',
+    icon: <Code2 size={20} />,
     backgroundEffect: 'aurora',
     colors: {
       primary: '#6B2D8B',
@@ -60,7 +62,7 @@ export const SOCIETIES = {
     name: 'IEEE Robotics & Automation Society',
     shortName: 'Robotics & Automation',
     description: 'Pioneering robotics and intelligent automation',
-    icon: '🤖',
+    icon: <Bot size={20} />,
     backgroundEffect: 'circuit_board',
     colors: {
       primary: '#E74C3C',
@@ -77,7 +79,7 @@ export const SOCIETIES = {
     name: 'IEEE Industrial Applications Society',
     shortName: 'Industrial Applications',
     description: 'Advancing the theory and practice of industrial and commercial systems',
-    icon: '⚙️',
+    icon: <Settings size={20} />,
     backgroundEffect: 'blueprint_grid',
     colors: {
       primary: '#F39C12',

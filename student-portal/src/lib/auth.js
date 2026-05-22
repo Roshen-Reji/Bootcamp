@@ -5,6 +5,8 @@
 
 import {
   signInWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
   signOut,
   onAuthStateChanged,
 } from 'firebase/auth';
@@ -16,6 +18,16 @@ import { auth, db } from './firebase';
  */
 export async function loginUser(email, password) {
   const userCredential = await signInWithEmailAndPassword(auth, email, password);
+  const userData = await getUserProfile(userCredential.user.uid);
+  return { ...userCredential.user, ...userData };
+}
+
+/**
+ * Sign in with Google
+ */
+export async function loginWithGoogle() {
+  const provider = new GoogleAuthProvider();
+  const userCredential = await signInWithPopup(auth, provider);
   const userData = await getUserProfile(userCredential.user.uid);
   return { ...userCredential.user, ...userData };
 }
