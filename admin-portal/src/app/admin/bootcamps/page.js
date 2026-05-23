@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { subscribeToBootcamps } from '@/lib/db';
+import { getAllBootcamps } from '@/lib/db';
 import GlassCard from '@/components/ui/GlassCard';
 import { getSocieties, getSocietyLabel } from '@/shared/societies';
 import styles from './page.module.css';
@@ -26,8 +26,13 @@ export default function BootcampsPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const unsub = subscribeToBootcamps(setBootcamps);
-    return () => unsub();
+    let isMounted = true;
+    const fetchBootcamps = async () => {
+      const data = await getAllBootcamps();
+      if (isMounted) setBootcamps(data);
+    };
+    fetchBootcamps();
+    return () => { isMounted = false; };
   }, []);
 
   const filtered = filter === 'all'

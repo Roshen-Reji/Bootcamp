@@ -19,6 +19,8 @@ import {
   serverTimestamp,
   writeBatch,
   increment,
+  limit,
+  startAfter,
 } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -103,6 +105,21 @@ export async function getStudents(bootcampId) {
     query(collection(db, 'bootcamps', bootcampId, 'students'), orderBy('createdAt', 'desc'))
   );
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+export async function getPaginatedStudents(bootcampId, pageSize = 10, lastVisible = null) {
+  let constraints = [orderBy('createdAt', 'desc')];
+  if (lastVisible) constraints.push(startAfter(lastVisible));
+  constraints.push(limit(pageSize));
+
+  const snap = await getDocs(
+    query(collection(db, 'bootcamps', bootcampId, 'students'), ...constraints)
+  );
+  
+  return {
+    data: snap.docs.map(d => ({ id: d.id, ...d.data() })),
+    lastVisible: snap.docs[snap.docs.length - 1] || null
+  };
 }
 
 export async function getStudentsByVolunteer(bootcampId, volunteerId) {
@@ -211,6 +228,24 @@ export async function getTasks(bootcampId) {
     )
   );
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+export async function getPaginatedTasks(bootcampId, pageSize = 10, lastVisible = null) {
+  let constraints = [
+    where('status', '==', 'active'),
+    orderBy('createdAt', 'desc')
+  ];
+  if (lastVisible) constraints.push(startAfter(lastVisible));
+  constraints.push(limit(pageSize));
+
+  const snap = await getDocs(
+    query(collection(db, 'bootcamps', bootcampId, 'tasks'), ...constraints)
+  );
+  
+  return {
+    data: snap.docs.map(d => ({ id: d.id, ...d.data() })),
+    lastVisible: snap.docs[snap.docs.length - 1] || null
+  };
 }
 
 export function subscribeToTasks(bootcampId, callback) {
@@ -354,6 +389,26 @@ export async function getSubmissions(bootcampId, filters = {}) {
 
   const snap = await getDocs(query(q, ...constraints));
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+export async function getPaginatedSubmissions(bootcampId, filters = {}, pageSize = 10, lastVisible = null) {
+  const constraints = [orderBy('submittedAt', 'desc')];
+
+  if (filters.taskId) constraints.unshift(where('taskId', '==', filters.taskId));
+  if (filters.studentId) constraints.unshift(where('studentId', '==', filters.studentId));
+  if (filters.status) constraints.unshift(where('status', '==', filters.status));
+
+  if (lastVisible) constraints.push(startAfter(lastVisible));
+  constraints.push(limit(pageSize));
+
+  const snap = await getDocs(
+    query(collection(db, 'bootcamps', bootcampId, 'submissions'), ...constraints)
+  );
+  
+  return {
+    data: snap.docs.map(d => ({ id: d.id, ...d.data() })),
+    lastVisible: snap.docs[snap.docs.length - 1] || null
+  };
 }
 
 export function subscribeToSubmissions(bootcampId, callback, filters = {}) {

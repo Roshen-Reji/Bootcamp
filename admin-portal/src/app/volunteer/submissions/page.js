@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
-import { getBootcamp, subscribeToSubmissions, subscribeToStudents, subscribeToTasks, reviewSubmission } from '@/lib/db';
+import { getBootcamp, getPaginatedSubmissions, getStudents, getTasks, reviewSubmission } from '@/lib/db';
 import GlassCard from '@/components/ui/GlassCard';
 import SocietyBackground from '@/components/backgrounds/SocietyBackground';
 import SubmissionAssistantPanel from '@/components/submissions/SubmissionAssistantPanel';
@@ -26,6 +26,9 @@ export default function VolunteerSubmissions() {
   const [students, setStudents] = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [tasks, setTasks] = useState([]);
+  const [lastVisible, setLastVisible] = useState(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const [filter, setFilter] = useState('pending');
   const [processingId, setProcessingId] = useState(null);
@@ -35,31 +38,42 @@ export default function VolunteerSubmissions() {
   const [rejectingId, setRejectingId] = useState(null);
   const [reviewNotes, setReviewNotes] = useState({});
 
-  useEffect(() => {
+  const loadInitialData = async () => {
     if (!user || !user.bootcampId) return;
+    
+    const [bc, allStudents, allTasks, subsRes] = await Promise.all([
+      getBootcamp(user.bootcampId),
+      getStudents(user.bootcampId),
+      getTasks(user.bootcampId),
+      getPaginatedSubmissions(user.bootcampId, {}, 10, null)
+    ]);
 
-    const loadBc = async () => {
-      const bc = await getBootcamp(user.bootcampId);
-      if (bc) setBootcamp(bc);
-    };
-    loadBc();
+    if (bc) setBootcamp(bc);
+    setStudents(allStudents.filter(s => s.volunteerId === user.uid));
+    setTasks(allTasks);
+    setSubmissions(subsRes.data);
+    setLastVisible(subsRes.lastVisible);
+    setHasMore(subsRes.data.length === 10);
+  };
 
-    const unsubStudents = subscribeToStudents(user.bootcampId, (allStudents) => {
-      setStudents(allStudents.filter(s => s.volunteerId === user.uid));
-    });
-
-    const unsubSubs = subscribeToSubmissions(user.bootcampId, (allSubs) => {
-      setSubmissions(allSubs);
-    });
-
-    const unsubTasks = subscribeToTasks(user.bootcampId, (data) => setTasks(data));
-
-    return () => {
-      unsubStudents();
-      unsubSubs();
-      unsubTasks();
-    };
+  useEffect(() => {
+    loadInitialData();
   }, [user]);
+
+  const loadMore = async () => {
+    if (!hasMore || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const res = await getPaginatedSubmissions(user.bootcampId, {}, 10, lastVisible);
+      setSubmissions(prev => [...prev, ...res.data]);
+      setLastVisible(res.lastVisible);
+      setHasMore(res.data.length === 10);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   // Maps for fast lookups
   const studentMap = {};
@@ -392,6 +406,18 @@ export default function VolunteerSubmissions() {
               </GlassCard>
             </motion.div>
           ))
+        )}
+
+        {hasMore && (
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '24px' }}>
+            <button 
+              className="btn btn-secondary" 
+              onClick={loadMore} 
+              disabled={loadingMore}
+            >
+              {loadingMore ? 'Loading...' : 'Load More Submissions'}
+            </button>
+          </div>
         )}
       </div>
     </div>

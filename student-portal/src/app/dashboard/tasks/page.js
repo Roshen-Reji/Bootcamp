@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
-import { getBootcamp, subscribeToTasks, subscribeToSubmissions, subscribeToStudent } from '@/lib/db';
+import { getBootcamp, getTasks, getSubmissions, subscribeToStudent } from '@/lib/db';
 import SocietyBackground from '@/components/backgrounds/SocietyBackground';
 import GlassCard from '@/components/ui/GlassCard';
 import styles from './page.module.css';
@@ -22,22 +22,34 @@ export default function StudentTasksPage() {
   useEffect(() => {
     if (!user?.bootcampId || !user?.uid) return;
 
-    const loadBc = async () => {
-      const bc = await getBootcamp(user.bootcampId);
-      if (bc) setBootcamp(bc);
-    };
-    loadBc();
+    let isMounted = true;
 
-    const unsubTasks = subscribeToTasks(user.bootcampId, setTasks);
-    const unsubSubs = subscribeToSubmissions(user.bootcampId, (allSubs) => {
-      setSubmissions(allSubs.filter(s => s.studentId === user.uid));
+    const loadData = async () => {
+      try {
+        const [bc, allTasks, userSubs] = await Promise.all([
+          getBootcamp(user.bootcampId),
+          getTasks(user.bootcampId),
+          getSubmissions(user.bootcampId, { studentId: user.uid })
+        ]);
+
+        if (isMounted) {
+          if (bc) setBootcamp(bc);
+          setTasks(allTasks);
+          setSubmissions(userSubs);
+        }
+      } catch (err) {
+        console.error('Failed to load tasks', err);
+      }
+    };
+
+    loadData();
+
+    const unsubStudent = subscribeToStudent(user.bootcampId, user.uid, (profile) => {
+      if (isMounted) setStudentProfile(profile);
     });
 
-    const unsubStudent = subscribeToStudent(user.bootcampId, user.uid, setStudentProfile);
-
     return () => {
-      unsubTasks();
-      unsubSubs();
+      isMounted = false;
       unsubStudent(); // Cleanup
     };
   }, [user]);
