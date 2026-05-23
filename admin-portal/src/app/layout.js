@@ -14,7 +14,7 @@ export default function RootLayout({ children }) {
     <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-        <meta name="theme-color" content="#07070f" />
+        <meta name="theme-color" content="#050508" />
         <link rel="icon" href="/favicon.ico" />
       </head>
       <body suppressHydrationWarning>
