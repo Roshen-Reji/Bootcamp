@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 import { createBootcamp } from '@/lib/db';
 import SocietyBackground from '@/components/backgrounds/SocietyBackground';
 import GlassCard from '@/components/ui/GlassCard';
@@ -28,6 +29,7 @@ const DEFAULT_THEMES = {
 export default function CreateBootcampPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const { applyTheme, resetTheme } = useTheme();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [previewSocieties, setPreviewSocieties] = useState([]);
@@ -37,12 +39,18 @@ export default function CreateBootcampPage() {
     description: '',
     society: [], // NOW AN ARRAY
     icon: '',
-    colorTheme: { primary: '#6C63FF', secondary: '#FF6584', accent: '#00D9FF' },
+    colorTheme: { primary: '#6C63FF', secondary: '#FF6584', accent: '#00D9FF', fontFamily: 'Inter' },
     teamConfig: { enabled: false, individualSubmissions: true },
   });
 
   const updateForm = (key, value) => {
-    setForm(prev => ({ ...prev, [key]: value }));
+    setForm(prev => {
+      const updated = { ...prev, [key]: value };
+      if (key === 'colorTheme' || key === 'society') {
+        applyTheme({ society: updated.society, colorTheme: updated.colorTheme });
+      }
+      return updated;
+    });
   };
 
   const toggleSociety = (societyId) => {
@@ -57,17 +65,26 @@ export default function CreateBootcampPage() {
 
     const primarySociety = currentSocieties[0];
     const icon = currentSocieties.length > 1 ? '🌐' : (SOCIETIES.find(s => s.id === primarySociety)?.icon || '');
-    const theme = primarySociety ? (DEFAULT_THEMES[primarySociety] || form.colorTheme) : { primary: '#6C63FF', secondary: '#FF6584', accent: '#00D9FF' };
+    const theme = primarySociety ? (DEFAULT_THEMES[primarySociety] || form.colorTheme) : { primary: '#6C63FF', secondary: '#FF6584', accent: '#00D9FF', fontFamily: 'Inter' };
 
-    setForm(prev => ({
-      ...prev,
-      society: currentSocieties,
-      icon,
-      colorTheme: theme
-    }));
+    setForm(prev => {
+      const updated = {
+        ...prev,
+        society: currentSocieties,
+        icon,
+        colorTheme: theme
+      };
+      applyTheme({ society: updated.society, colorTheme: updated.colorTheme });
+      return updated;
+    });
 
     setPreviewSocieties(currentSocieties);
   };
+
+  // Reset theme when unmounting
+  useEffect(() => {
+    return () => resetTheme();
+  }, [resetTheme]);
 
   const handleSubmit = async () => {
     if (!form.name || form.society.length === 0) return;
@@ -97,7 +114,7 @@ export default function CreateBootcampPage() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <SocietyBackground society={previewSocieties} />
+            <SocietyBackground society={previewSocieties} customColor={form.colorTheme.primary} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -237,7 +254,7 @@ export default function CreateBootcampPage() {
               transition={{ duration: 0.3 }}
             >
               <GlassCard hover={false} padding="xl">
-                <h2 className={styles.stepTitle}>Customize Color Theme</h2>
+                <h2 className={styles.stepTitle}>Customize Theme</h2>
                 <p className={styles.stepDesc}>
                   Fine-tune the colors or keep the society defaults.
                 </p>
@@ -277,6 +294,31 @@ export default function CreateBootcampPage() {
                       />
                       <span className={styles.colorHex}>{form.colorTheme.accent}</span>
                     </div>
+                  </div>
+                  <div className={styles.colorPicker}>
+                    <label>Font Family</label>
+                    <select
+                      className="select"
+                      value={form.colorTheme.fontFamily || 'Inter'}
+                      onChange={(e) => updateForm('colorTheme', { ...form.colorTheme, fontFamily: e.target.value })}
+                      style={{ fontFamily: form.colorTheme.fontFamily ? `'${form.colorTheme.fontFamily}', sans-serif` : "'Inter', sans-serif" }}
+                    >
+                      <option value="Inter" style={{ fontFamily: "'Inter', sans-serif" }}>Inter (Default)</option>
+                      <option value="Outfit" style={{ fontFamily: "'Outfit', sans-serif" }}>Outfit</option>
+                      <option value="Poppins" style={{ fontFamily: "'Poppins', sans-serif" }}>Poppins</option>
+                      <option value="Montserrat" style={{ fontFamily: "'Montserrat', sans-serif" }}>Montserrat</option>
+                      <option value="Roboto" style={{ fontFamily: "'Roboto', sans-serif" }}>Roboto</option>
+                      <option value="Playfair Display" style={{ fontFamily: "'Playfair Display', serif" }}>Playfair Display</option>
+                      <option value="Space Grotesk" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Space Grotesk</option>
+                      <option value="Nunito" style={{ fontFamily: "'Nunito', sans-serif" }}>Nunito</option>
+                      <option value="Raleway" style={{ fontFamily: "'Raleway', sans-serif" }}>Raleway</option>
+                      <option value="Lato" style={{ fontFamily: "'Lato', sans-serif" }}>Lato</option>
+                      <option value="Oswald" style={{ fontFamily: "'Oswald', sans-serif" }}>Oswald</option>
+                      <option value="Ubuntu" style={{ fontFamily: "'Ubuntu', sans-serif" }}>Ubuntu</option>
+                      <option value="Lora" style={{ fontFamily: "'Lora', serif" }}>Lora</option>
+                      <option value="Merriweather" style={{ fontFamily: "'Merriweather', serif" }}>Merriweather</option>
+                      <option value="Quicksand" style={{ fontFamily: "'Quicksand', sans-serif" }}>Quicksand</option>
+                    </select>
                   </div>
                 </div>
                 <div className={styles.themePreview}>
