@@ -21,6 +21,11 @@ export default function VolunteersPage() {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ displayName: '', email: '', password: '' });
 
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [selectedVolunteerForPassword, setSelectedVolunteerForPassword] = useState(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
   // Bulk Upload State
   const [previewData, setPreviewData] = useState([]);
   const [isPreviewModalOpen, setPreviewModalOpen] = useState(false);
@@ -66,6 +71,40 @@ export default function VolunteersPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    if (!selectedVolunteerForPassword || !newPassword) return;
+
+    setIsChangingPassword(true);
+    try {
+      const res = await fetch('/api/users/password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          uid: selectedVolunteerForPassword.uid || selectedVolunteerForPassword.id,
+          newPassword: newPassword
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      alert('Password updated successfully!');
+      setPasswordModalOpen(false);
+      setNewPassword('');
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  const openPasswordModal = (volunteer) => {
+    setSelectedVolunteerForPassword(volunteer);
+    setNewPassword('');
+    setPasswordModalOpen(true);
   };
 
   const handleDelete = async (uid, name) => {
@@ -222,7 +261,15 @@ export default function VolunteersPage() {
                     <h3 className={styles.volName}>{vol.displayName}</h3>
                     <p className={styles.volEmail}>{vol.email}</p>
                   </div>
-                  <div style={{ marginLeft: 'auto' }}>
+                  <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={() => openPasswordModal(vol)}
+                      className="btn btn-secondary btn-sm"
+                      style={{ padding: '4px 8px' }}
+                      title="Reset Password"
+                    >
+                      Key
+                    </button>
                     <button 
                       className="btn btn-ghost btn-sm" 
                       style={{ color: '#ff4757', padding: '6px' }}
@@ -275,6 +322,29 @@ export default function VolunteersPage() {
           </div>
           <button type="submit" className="btn btn-primary w-full mt-4" disabled={loading}>
             {loading ? 'Creating...' : 'Create Account'}
+          </button>
+        </form>
+      </Modal>
+
+      <Modal
+        isOpen={passwordModalOpen}
+        onClose={() => setPasswordModalOpen(false)}
+        title={`Change Password: ${selectedVolunteerForPassword?.displayName}`}
+      >
+        <form onSubmit={handleChangePassword} className={styles.form}>
+          <div className="input-group">
+            <label>New Password</label>
+            <input
+              required
+              minLength={6}
+              type="password"
+              className="input"
+              value={newPassword}
+              onChange={e => setNewPassword(e.target.value)}
+            />
+          </div>
+          <button type="submit" className="btn btn-primary mt-4" disabled={isChangingPassword}>
+            {isChangingPassword ? 'Updating...' : 'Update Password'}
           </button>
         </form>
       </Modal>

@@ -45,11 +45,7 @@ export default function CreateBootcampPage() {
 
   const updateForm = (key, value) => {
     setForm(prev => {
-      const updated = { ...prev, [key]: value };
-      if (key === 'colorTheme' || key === 'society') {
-        applyTheme({ society: updated.society, colorTheme: updated.colorTheme });
-      }
-      return updated;
+      return { ...prev, [key]: value };
     });
   };
 
@@ -68,14 +64,12 @@ export default function CreateBootcampPage() {
     const theme = primarySociety ? (DEFAULT_THEMES[primarySociety] || form.colorTheme) : { primary: '#6C63FF', secondary: '#FF6584', accent: '#00D9FF', fontFamily: 'Inter' };
 
     setForm(prev => {
-      const updated = {
+      return {
         ...prev,
         society: currentSocieties,
         icon,
         colorTheme: theme
       };
-      applyTheme({ society: updated.society, colorTheme: updated.colorTheme });
-      return updated;
     });
 
     setPreviewSocieties(currentSocieties);
@@ -85,6 +79,11 @@ export default function CreateBootcampPage() {
   useEffect(() => {
     return () => resetTheme();
   }, [resetTheme]);
+
+  // Apply theme when form changes
+  useEffect(() => {
+    applyTheme({ society: form.society, colorTheme: form.colorTheme });
+  }, [form.society, form.colorTheme, applyTheme]);
 
   const handleSubmit = async () => {
     if (!form.name || form.society.length === 0) return;

@@ -295,8 +295,11 @@ export default function StudentTaskDetailPage() {
 
   const mainSubmission = submissions.find(s => !s.subtaskId);
   const isMainTaskLocked = mainSubmission?.status === 'pending' || mainSubmission?.status === 'approved';
-  const isMainDisabled = submitting || isEmptySubmission(submissionContent);
-  const isSubDisabled = submittingSubtask || isEmptySubmission(subtaskContent);
+  
+  const isDeadlinePassed = task.deadline && new Date() > new Date(task.deadline);
+  
+  const isMainDisabled = submitting || isEmptySubmission(submissionContent) || isDeadlinePassed;
+  const isSubDisabled = submittingSubtask || isEmptySubmission(subtaskContent) || isDeadlinePassed;
   const submissionOptions = task.submissionTypes?.map(type => SUBMISSION_TYPE_CONFIG.find(c => c.value === type) || { value: type, label: type }) || [];
 
   return (
@@ -309,7 +312,15 @@ export default function StudentTaskDetailPage() {
         </button>
         <div className={styles.titleRow}>
           <h1 className={styles.title}>{task.title}</h1>
-          <span className="badge badge-primary">{task.points} pts</span>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            {task.deadline && (
+              <span className={`badge ${isDeadlinePassed ? 'badge-danger' : 'badge-warning'}`} style={{ opacity: 0.8 }}>
+                {isDeadlinePassed ? 'Deadline Passed: ' : 'Due: '}
+                {new Date(task.deadline).toLocaleString()}
+              </span>
+            )}
+            <span className="badge badge-primary">{task.points} pts</span>
+          </div>
         </div>
       </div>
 
@@ -455,6 +466,13 @@ export default function StudentTaskDetailPage() {
                   </div>
                 )}
 
+                {isDeadlinePassed && (
+                  <div style={{ marginBottom: '16px', background: 'rgba(255, 71, 87, 0.1)', color: '#ff4757', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255, 71, 87, 0.3)' }}>
+                    <strong>Deadline Passed</strong>
+                    <p style={{ margin: '4px 0 0', fontSize: '0.9rem' }}>The submission deadline was {new Date(task.deadline).toLocaleString()}. You can no longer submit your work.</p>
+                  </div>
+                )}
+
                 <div className="input-group">
                   <label style={{ marginBottom: '8px', display: 'block' }}>Submission Type</label>
                   <CustomDropdown
@@ -477,7 +495,7 @@ export default function StudentTaskDetailPage() {
                 </div>
 
                 <button type="submit" className="btn btn-primary w-full mt-4" disabled={isMainDisabled}>
-                  {submitting ? 'Submitting...' : 'Submit Final Task'}
+                  {submitting ? 'Submitting...' : isDeadlinePassed ? 'Deadline Passed' : 'Submit Final Task'}
                 </button>
               </form>
             )}
@@ -499,7 +517,7 @@ export default function StudentTaskDetailPage() {
           </div>
 
           <button type="submit" className="btn btn-primary w-full mt-2" disabled={isSubDisabled}>
-            {submittingSubtask ? 'Submitting...' : 'Submit Subtask'}
+            {submittingSubtask ? 'Submitting...' : isDeadlinePassed ? 'Deadline Passed' : 'Submit Subtask'}
           </button>
         </form>
       </Modal>

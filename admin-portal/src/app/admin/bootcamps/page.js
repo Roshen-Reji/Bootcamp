@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { getAllBootcamps } from '@/lib/db';
+import { useAuth } from '@/context/AuthContext';
 import GlassCard from '@/components/ui/GlassCard';
 import { getSocieties, getSocietyLabel } from '@/shared/societies';
 import styles from './page.module.css';
@@ -25,15 +26,21 @@ export default function BootcampsPage() {
   const [filter, setFilter] = useState('all');
   const router = useRouter();
 
+  const { user } = useAuth();
+
   useEffect(() => {
     let isMounted = true;
     const fetchBootcamps = async () => {
+      if (!user) return;
       const data = await getAllBootcamps();
-      if (isMounted) setBootcamps(data);
+      const userBootcamps = user.role === 'organiser' 
+        ? data.filter(bc => bc.createdBy === user.uid)
+        : data;
+      if (isMounted) setBootcamps(userBootcamps);
     };
     fetchBootcamps();
     return () => { isMounted = false; };
-  }, []);
+  }, [user]);
 
   const filtered = filter === 'all'
     ? bootcamps

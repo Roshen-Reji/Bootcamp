@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 
 const SOCIETIES = {
   computer_society: {
@@ -50,7 +50,7 @@ export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(DEFAULT_THEME);
   const [society, setSociety] = useState(null);
 
-  const applyTheme = (bootcamp) => {
+  const applyTheme = useCallback((bootcamp) => {
     if (!bootcamp) {
       setTheme(DEFAULT_THEME);
       setSociety(null);
@@ -89,9 +89,9 @@ export function ThemeProvider({ children }) {
     } else {
       root.style.removeProperty('--font-sans');
     }
-  };
+  }, []);
 
-  const resetTheme = () => {
+  const resetTheme = useCallback(() => {
     setTheme(DEFAULT_THEME);
     setSociety(null);
     const root = document.documentElement;
@@ -99,7 +99,7 @@ export function ThemeProvider({ children }) {
       root.style.removeProperty(`--color-${key}`);
     });
     root.style.removeProperty('--font-sans');
-  };
+  }, []);
 
   return (
     <ThemeContext.Provider value={{ theme, society, applyTheme, resetTheme }}>

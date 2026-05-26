@@ -57,3 +57,44 @@ export async function PATCH(request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
+export async function DELETE(request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const uid = searchParams.get('uid');
+
+    if (!uid) {
+      return NextResponse.json({ error: 'Missing uid' }, { status: 400 });
+    }
+
+    // Delete from Firestore
+    await dbAdmin.collection('users').doc(uid).delete();
+    
+    // Delete from Firebase Auth
+    const { authAdmin } = await import('@/lib/firebaseAdmin');
+    await authAdmin.deleteUser(uid);
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting global user:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function PUT(request) {
+  try {
+    const { uid, password } = await request.json();
+
+    if (!uid || !password) {
+      return NextResponse.json({ error: 'Missing uid or password' }, { status: 400 });
+    }
+
+    const { authAdmin } = await import('@/lib/firebaseAdmin');
+    await authAdmin.updateUser(uid, { password });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error updating global user password:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}

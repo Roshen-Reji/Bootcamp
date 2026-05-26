@@ -24,6 +24,7 @@ export default function CreateTaskPage() {
     level: TASK_LEVELS.BEGINNER,
     points: 100,
     guidelines: '',
+    deadline: '',
     submissionTypes: ['text'],
     assignmentMode: ASSIGNMENT_MODES.RANDOM,
   });
@@ -136,6 +137,16 @@ export default function CreateTaskPage() {
                 value={form.guidelines}
                 onChange={(e) => updateForm('guidelines', e.target.value)}
                 rows={4}
+              />
+            </div>
+
+            <div className="input-group">
+              <label>Submission Deadline (Optional)</label>
+              <input
+                type="datetime-local"
+                className="input"
+                value={form.deadline}
+                onChange={(e) => updateForm('deadline', e.target.value)}
               />
             </div>
 

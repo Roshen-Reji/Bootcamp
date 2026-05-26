@@ -9,8 +9,8 @@ import CustomDropdown from '@/components/ui/CustomDropdown';
 import { Users } from 'lucide-react';
 import styles from './page.module.css';
 
-export default function GlobalStudentsPage() {
-  const [students, setStudents] = useState([]);
+export default function GlobalVolunteersPage() {
+  const [volunteers, setVolunteers] = useState([]);
   const [bootcamps, setBootcamps] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -26,7 +26,7 @@ export default function GlobalStudentsPage() {
     const fetchData = async () => {
       try {
         const [usersRes, bcRes] = await Promise.all([
-          fetch('/api/global-users?role=student'),
+          fetch('/api/global-users?role=volunteer'),
           getAllBootcamps()
         ]);
         
@@ -39,10 +39,10 @@ export default function GlobalStudentsPage() {
         if (usersRes.ok) {
           const data = await usersRes.json();
           const allowedBootcampIds = bcData.map(b => b.id);
-          const filteredStudents = user.role === 'organiser'
+          const filteredVolunteers = user.role === 'organiser'
               ? data.users.filter(s => allowedBootcampIds.includes(s.bootcampId))
               : data.users;
-          setStudents(filteredStudents);
+          setVolunteers(filteredVolunteers);
         }
       } catch (err) {
         console.error(err);
@@ -63,8 +63,8 @@ export default function GlobalStudentsPage() {
       
       if (!res.ok) throw new Error('Failed to update active bootcamp');
       
-      setStudents(students.map(s => s.uid === uid ? { ...s, bootcampId: newBootcampId } : s));
-      alert('Active bootcamp updated successfully. The student will be redirected to this bootcamp on next login.');
+      setVolunteers(volunteers.map(v => v.uid === uid ? { ...v, bootcampId: newBootcampId } : v));
+      alert('Active bootcamp updated successfully. The volunteer will be redirected to this bootcamp on next login.');
     } catch (err) {
       console.error(err);
       alert(err.message);
@@ -79,9 +79,9 @@ export default function GlobalStudentsPage() {
       });
       if (!res.ok) {
         const error = await res.json();
-        throw new Error(error.error || 'Failed to delete student');
+        throw new Error(error.error || 'Failed to delete volunteer');
       }
-      setStudents(students.filter(s => s.uid !== uid));
+      setVolunteers(volunteers.filter(s => s.uid !== uid));
     } catch (error) {
       console.error(error);
       alert(error.message);
@@ -131,8 +131,8 @@ export default function GlobalStudentsPage() {
     <div className={styles.container}>
       <div className={styles.header}>
         <div>
-          <h1 className={styles.title}>Global Students Directory</h1>
-          <p className={styles.subtitle}>Manage all registered students across the platform</p>
+          <h1 className={styles.title}>Global Volunteers Directory</h1>
+          <p className={styles.subtitle}>Manage all registered volunteers across the platform</p>
         </div>
       </div>
 
@@ -142,7 +142,7 @@ export default function GlobalStudentsPage() {
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>Student Info</th>
+                  <th>Volunteer Info</th>
                   <th>Registered Email</th>
                   <th>Active Bootcamp</th>
                   <th>Actions</th>
@@ -152,21 +152,21 @@ export default function GlobalStudentsPage() {
                 {loading ? (
                   <tr>
                     <td colSpan={3} style={{ textAlign: 'center', padding: '32px', color: 'var(--color-text-secondary)' }}>
-                      Loading students...
+                      Loading volunteers...
                     </td>
                   </tr>
-                ) : students.length === 0 ? (
+                ) : volunteers.length === 0 ? (
                   <tr>
                     <td colSpan={4} style={{ textAlign: 'center', padding: '48px', color: 'var(--color-text-secondary)' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
                         <Users size={48} strokeWidth={1.5} opacity={0.5} />
-                        <p>No students found in the database.</p>
+                        <p>No volunteers found in the database.</p>
                       </div>
                     </td>
                   </tr>
                 ) : (
-                  students.map(student => (
-                    <tr key={student.uid}>
+                  volunteers.map(volunteer => (
+                    <tr key={volunteer.uid}>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                           <div style={{
@@ -175,24 +175,24 @@ export default function GlobalStudentsPage() {
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             fontWeight: '600', fontSize: '1.2rem'
                           }}>
-                            {student.displayName?.charAt(0).toUpperCase() || 'S'}
+                            {volunteer.displayName?.charAt(0).toUpperCase() || 'V'}
                           </div>
                           <div>
-                            <div style={{ fontWeight: '600', color: 'var(--color-text)' }}>{student.displayName}</div>
+                            <div style={{ fontWeight: '600', color: 'var(--color-text)' }}>{volunteer.displayName}</div>
                             <div style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
-                              Joined: {student.createdAt ? new Date(student.createdAt).toLocaleDateString() : 'Unknown'}
+                              Joined: {volunteer.createdAt ? new Date(volunteer.createdAt).toLocaleDateString() : 'Unknown'}
                             </div>
                           </div>
                         </div>
                       </td>
                       <td style={{ color: 'var(--color-text-secondary)' }}>
-                        {student.email}
+                        {volunteer.email}
                       </td>
                       <td>
                         <div style={{ width: '220px' }}>
                           <CustomDropdown
-                            value={student.bootcampId || ''}
-                            onChange={(val) => handleBootcampChange(student.uid, val)}
+                            value={volunteer.bootcampId || ''}
+                            onChange={(val) => handleBootcampChange(volunteer.uid, val)}
                             options={[
                               { value: '', label: '-- No Active Bootcamp --' },
                               ...bootcampOptions
@@ -203,7 +203,7 @@ export default function GlobalStudentsPage() {
                       <td>
                         <div style={{ display: 'flex', gap: '8px' }}>
                           <button
-                            onClick={() => openPasswordModal(student)}
+                            onClick={() => openPasswordModal(volunteer)}
                             className="btn btn-secondary btn-sm"
                             style={{ padding: '6px 12px' }}
                             title="Reset Password"
@@ -213,8 +213,8 @@ export default function GlobalStudentsPage() {
                           <button 
                             className="btn btn-ghost btn-sm" 
                             style={{ color: '#ff4757', padding: '6px 12px' }}
-                            onClick={() => handleDelete(student.uid, student.displayName)}
-                            title="Delete Student"
+                            onClick={() => handleDelete(volunteer.uid, volunteer.displayName)}
+                            title="Delete Volunteer"
                           >
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                           </button>
