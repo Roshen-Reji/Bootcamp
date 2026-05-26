@@ -260,6 +260,8 @@ export default function SubmissionsPage() {
                         <SubmissionAssistantPanel
                           submission={sub}
                           maxPoints={getMaxPoints(sub)}
+                          otherSubmissions={submissions.filter(s => s.taskId === sub.taskId && s.id !== sub.id).map(s => s.content)}
+                          isTeam={bootcamp?.teamConfig?.enabled}
                           onUseFeedback={(note) => setDraftNote(sub.id, note)}
                           onUsePoints={(points) => setCustomPoints(prev => ({ ...prev, [sub.id]: points }))}
                         />
@@ -355,21 +357,39 @@ export default function SubmissionsPage() {
 
                         {sub.status !== 'pending' && (
                           <div className={styles.reviewNoteBox}>
-                            <label>Send another review note to student</label>
-                            <textarea
-                              className="textarea"
-                              value={getDraftNote(sub)}
-                              onChange={(e) => setDraftNote(sub.id, e.target.value)}
-                              placeholder="Add a note without changing the result."
-                            />
-                            <div className={styles.reviewNoteActions}>
-                              <button
-                                className="btn btn-secondary btn-sm"
-                                onClick={() => handleStatusUpdate(sub, sub.status, sub.pointsAwarded || 0, getDraftNote(sub))}
-                                disabled={processingId === sub.id || !getDraftNote(sub).trim()}
-                              >
-                                {processingId === sub.id ? 'Saving...' : 'Send Review'}
-                              </button>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+                              <div style={{ flex: 1, minWidth: '200px' }}>
+                                <label>Send another review note to student</label>
+                                <textarea
+                                  className="textarea"
+                                  value={getDraftNote(sub)}
+                                  onChange={(e) => setDraftNote(sub.id, e.target.value)}
+                                  placeholder="Add a note without changing the result."
+                                />
+                                <div className={styles.reviewNoteActions}>
+                                  <button
+                                    className="btn btn-secondary btn-sm"
+                                    onClick={() => handleStatusUpdate(sub, sub.status, sub.pointsAwarded || 0, getDraftNote(sub))}
+                                    disabled={processingId === sub.id || !getDraftNote(sub).trim()}
+                                  >
+                                    {processingId === sub.id ? 'Saving...' : 'Send Review'}
+                                  </button>
+                                </div>
+                              </div>
+                              <div style={{ paddingLeft: '16px', borderLeft: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <label style={{ fontSize: '0.85rem', opacity: 0.8 }}>Admin Actions</label>
+                                <button
+                                  className="btn btn-secondary btn-sm"
+                                  onClick={() => {
+                                    if (confirm('Are you sure you want to revert this submission to Pending? Any awarded points will be deducted.')) {
+                                      handleStatusUpdate(sub, 'pending', 0, getDraftNote(sub));
+                                    }
+                                  }}
+                                  disabled={processingId === sub.id}
+                                >
+                                  Revert to Pending
+                                </button>
+                              </div>
                             </div>
                           </div>
                         )}

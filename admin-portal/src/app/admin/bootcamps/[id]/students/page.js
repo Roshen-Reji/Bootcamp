@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { getBootcamp, subscribeToStudents, subscribeToVolunteers, subscribeToTeams, getTeams, createTeam, updateStudent } from '@/lib/db';
+import { getBootcamp, subscribeToStudents, subscribeToVolunteers, subscribeToTeams, getTeams, createTeam, updateTeam, deleteTeam, updateStudent } from '@/lib/db';
 import { TASK_LEVELS } from '@/shared/constants';
 import * as XLSX from 'xlsx';
 import SocietyBackground from '@/components/backgrounds/SocietyBackground';
@@ -46,6 +46,11 @@ export default function StudentsPage() {
   const [isPreviewModalOpen, setPreviewModalOpen] = useState(false);
   const [isUploadingBatch, setIsUploadingBatch] = useState(false);
   const fileInputRef = useRef(null);
+
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedUserForEdit, setSelectedUserForEdit] = useState(null);
+  const [editForm, setEditForm] = useState({ displayName: '', email: '', teamId: '' });
+  const [isEditingUser, setIsEditingUser] = useState(false);
 
   useEffect(() => {
     const loadBc = async () => {
@@ -111,6 +116,32 @@ export default function StudentsPage() {
     }
   };
 
+  const [manageTeamsModalOpen, setManageTeamsModalOpen] = useState(false);
+  const [editingTeamId, setEditingTeamId] = useState(null);
+  const [editingTeamName, setEditingTeamName] = useState('');
+
+  const handleUpdateTeam = async (teamId) => {
+    if (!editingTeamName) return;
+    try {
+      await updateTeam(id, teamId, { name: editingTeamName });
+      setEditingTeamId(null);
+      setEditingTeamName('');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update team');
+    }
+  };
+
+  const handleDeleteTeam = async (teamId, teamName) => {
+    if (!confirm(`Are you sure you want to delete the team "${teamName}"? This will not delete the students, but they will be left without a team.`)) return;
+    try {
+      await deleteTeam(id, teamId);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to delete team');
+    }
+  };
+
   const handleLevelUpdate = async (studentId, newLevel) => {
     try {
       await updateStudent(id, studentId, { level: newLevel });
@@ -126,6 +157,15 @@ export default function StudentsPage() {
     } catch (err) {
       console.error(err);
       alert("Failed to assign volunteer");
+    }
+  };
+
+  const handleTeamUpdate = async (studentId, newTeamId) => {
+    try {
+      await updateStudent(id, studentId, { teamId: newTeamId });
+    } catch (err) {
+      console.error(err);
+      alert("Failed to assign team");
     }
   };
 
@@ -157,10 +197,46 @@ export default function StudentsPage() {
     }
   };
 
+  const handleEditUser = async (e) => {
+    e.preventDefault();
+    if (!selectedUserForEdit) return;
+
+    setIsEditingUser(true);
+    try {
+      const res = await fetch('/api/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          uid: selectedUserForEdit.uid || selectedUserForEdit.id,
+          displayName: editForm.displayName,
+          email: editForm.email,
+          teamId: editForm.teamId,
+          role: 'student',
+          bootcampId: id
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update user');
+
+      setEditModalOpen(false);
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setIsEditingUser(false);
+    }
+  };
+
   const openPasswordModal = (student) => {
     setSelectedStudentForPassword(student);
     setNewPassword('');
     setPasswordModalOpen(true);
+  };
+
+  const openEditModal = (student) => {
+    setSelectedUserForEdit(student);
+    setEditForm({ displayName: student.displayName, email: student.email, teamId: student.teamId || '' });
+    setEditModalOpen(true);
   };
 
   const handleDelete = async (uid, name) => {
@@ -290,9 +366,14 @@ export default function StudentsPage() {
             Bulk Upload
           </button>
           {bootcamp.teamConfig?.enabled && (
-            <button className="btn btn-secondary" onClick={() => setTeamModalOpen(true)}>
-              + New Team
-            </button>
+            <>
+              <button className="btn btn-secondary" onClick={() => setManageTeamsModalOpen(true)}>
+                Manage Teams
+              </button>
+              <button className="btn btn-secondary" onClick={() => setTeamModalOpen(true)}>
+                + New Team
+              </button>
+            </>
           )}
           <button className="btn btn-primary" onClick={() => setModalOpen(true)}>
             + Add Student
@@ -354,11 +435,28 @@ export default function StudentsPage() {
                     </td>
                     {bootcamp.teamConfig?.enabled && (
                       <td>
-                        {teams.find(t => t.id === student.teamId)?.name || '-'}
+                        <div style={{ width: '160px' }}>
+                          <CustomDropdown
+                            small={true}
+                            value={student.teamId || ''}
+                            onChange={(val) => handleTeamUpdate(student.uid || student.id, val)}
+                            options={[
+                              { value: '', label: 'Unassigned' },
+                              ...teams.map(t => ({ value: t.id, label: t.name }))
+                            ]}
+                          />
+                        </div>
                       </td>
                     )}
                     <td className={styles.pointsCell}>
                       {student.totalPoints || 0}
+                      <button
+                        onClick={() => openEditModal(student)}
+                        className="btn btn-secondary btn-sm"
+                        style={{ marginLeft: '12px', padding: '4px 8px' }}
+                      >
+                        Edit
+                      </button>
                       <button
                         onClick={() => openPasswordModal(student)}
                         className="btn btn-secondary btn-sm"
@@ -464,6 +562,59 @@ export default function StudentsPage() {
         </form>
       </Modal>
 
+      {/* Manage Teams Modal */}
+      <Modal isOpen={manageTeamsModalOpen} onClose={() => setManageTeamsModalOpen(false)} title="Manage Teams">
+        <div className="flex-col gap-md" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+          {teams.length === 0 ? (
+            <p style={{ color: 'var(--color-text-secondary)' }}>No teams found.</p>
+          ) : (
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {teams.map(team => (
+                <li key={team.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  {editingTeamId === team.id ? (
+                    <div style={{ display: 'flex', gap: '8px', flex: 1, marginRight: '12px' }}>
+                      <input
+                        className="input"
+                        style={{ flex: 1, padding: '4px 8px' }}
+                        value={editingTeamName}
+                        onChange={e => setEditingTeamName(e.target.value)}
+                        autoFocus
+                      />
+                      <button className="btn btn-primary btn-sm" onClick={() => handleUpdateTeam(team.id)}>Save</button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => { setEditingTeamId(null); setEditingTeamName(''); }}>Cancel</button>
+                    </div>
+                  ) : (
+                    <>
+                      <span style={{ color: 'var(--color-text)' }}>{team.name}</span>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          style={{ padding: '4px 8px' }}
+                          onClick={() => {
+                            setEditingTeamId(team.id);
+                            setEditingTeamName(team.name);
+                          }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          style={{ color: '#ff4757', padding: '4px 8px' }}
+                          onClick={() => handleDeleteTeam(team.id, team.name)}
+                          title="Delete Team"
+                        >
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </Modal>
+
       {/* Change Password Modal */}
       <Modal
         isOpen={passwordModalOpen}
@@ -484,6 +635,38 @@ export default function StudentsPage() {
           </div>
           <button type="submit" className="btn btn-primary mt-4" disabled={isChangingPassword}>
             {isChangingPassword ? 'Updating...' : 'Update Password'}
+          </button>
+        </form>
+      </Modal>
+
+      {/* Edit Student Modal */}
+      <Modal
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        title={`Edit Student: ${selectedUserForEdit?.displayName}`}
+      >
+        <form onSubmit={handleEditUser} className="flex-col gap-md">
+          <div className="input-group">
+            <label>Display Name</label>
+            <input
+              required
+              className="input"
+              value={editForm.displayName}
+              onChange={e => setEditForm({ ...editForm, displayName: e.target.value })}
+            />
+          </div>
+          <div className="input-group">
+            <label>Email Address</label>
+            <input
+              required
+              type="email"
+              className="input"
+              value={editForm.email}
+              onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+            />
+          </div>
+          <button type="submit" className="btn btn-primary mt-4" disabled={isEditingUser}>
+            {isEditingUser ? 'Saving...' : 'Save Changes'}
           </button>
         </form>
       </Modal>

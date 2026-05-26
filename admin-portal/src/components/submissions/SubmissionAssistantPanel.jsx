@@ -13,7 +13,7 @@ const AssistantIcon = () => (
   </svg>
 );
 
-export default function SubmissionAssistantPanel({ submission, maxPoints, onUseFeedback, onUsePoints }) {
+export default function SubmissionAssistantPanel({ submission, maxPoints, otherSubmissions = [], isTeam = false, onUseFeedback, onUsePoints }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [analysis, setAnalysis] = useState(null);
@@ -30,7 +30,7 @@ export default function SubmissionAssistantPanel({ submission, maxPoints, onUseF
         const res = await fetch('/api/submissions/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ submission, maxPoints })
+          body: JSON.stringify({ submission, maxPoints, otherSubmissions, isTeam })
         });
 
         if (!res.ok) throw new Error('Failed to generate AI review');

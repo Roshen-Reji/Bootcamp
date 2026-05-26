@@ -195,6 +195,17 @@ export async function createTeam(bootcampId, data) {
   return docRef.id;
 }
 
+export async function updateTeam(bootcampId, teamId, data) {
+  await updateDoc(doc(db, 'bootcamps', bootcampId, 'teams', teamId), {
+    ...data,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function deleteTeam(bootcampId, teamId) {
+  await deleteDoc(doc(db, 'bootcamps', bootcampId, 'teams', teamId));
+}
+
 export async function getTeams(bootcampId) {
   const snap = await getDocs(
     query(collection(db, 'bootcamps', bootcampId, 'teams'), orderBy('name'))
@@ -431,7 +442,10 @@ export async function reviewSubmission(bootcampId, submissionId, reviewData) {
   const submission = submissionDoc.data();
   const wasApproved = submission.status === 'approved';
   const isApproving = reviewData.status === 'approved';
+  const isReverting = wasApproved && (reviewData.status === 'pending' || reviewData.status === 'rejected');
+  
   const shouldAwardPoints = isApproving && !wasApproved && (reviewData.pointsAwarded || 0) > 0;
+  const shouldDeductPoints = isReverting && (submission.pointsAwarded || 0) > 0;
 
   const batch = writeBatch(db);
 
@@ -452,6 +466,21 @@ export async function reviewSubmission(bootcampId, submissionId, reviewData) {
     if (lbDoc.exists()) {
       batch.update(leaderboardRef, {
         totalPoints: increment(reviewData.pointsAwarded),
+        lastUpdated: serverTimestamp(),
+      });
+    }
+  } else if (shouldDeductPoints) {
+    const studentRef = doc(db, 'bootcamps', bootcampId, 'students', submission.studentId);
+    batch.update(studentRef, {
+      totalPoints: increment(-submission.pointsAwarded),
+    });
+
+    // Update leaderboard entry
+    const leaderboardRef = doc(db, 'bootcamps', bootcampId, 'leaderboard', submission.studentId);
+    const lbDoc = await getDoc(leaderboardRef);
+    if (lbDoc.exists()) {
+      batch.update(leaderboardRef, {
+        totalPoints: increment(-submission.pointsAwarded),
         lastUpdated: serverTimestamp(),
       });
     }

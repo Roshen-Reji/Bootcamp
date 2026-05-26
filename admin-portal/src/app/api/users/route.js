@@ -142,3 +142,63 @@ export async function DELETE(request) {
   }
 }
 
+export async function PUT(request) {
+  try {
+    const data = await request.json();
+    const { uid, email, displayName, role, bootcampId } = data;
+
+    if (!uid) {
+      return NextResponse.json({ error: 'Missing uid' }, { status: 400 });
+    }
+
+    if (email) {
+      const emailCheck = await isRealEmailDomain(email);
+      if (!emailCheck.valid) {
+        return NextResponse.json({ error: emailCheck.message }, { status: 400 });
+      }
+    }
+
+    // Update Firebase Auth
+    const authUpdate = {};
+    if (email) authUpdate.email = email;
+    if (displayName) authUpdate.displayName = displayName;
+    
+    if (Object.keys(authUpdate).length > 0) {
+      await authAdmin.updateUser(uid, authUpdate);
+    }
+
+    // Update Firestore User Doc
+    const dbUpdate = {};
+    if (email) dbUpdate.email = email;
+    if (displayName) dbUpdate.displayName = displayName;
+    
+    if (Object.keys(dbUpdate).length > 0) {
+      await dbAdmin.collection('users').doc(uid).update(dbUpdate);
+      
+      // Update bootcamp subcollections
+      const userDoc = await dbAdmin.collection('users').doc(uid).get();
+      if (userDoc.exists) {
+        const userData = userDoc.data();
+        const bootcamps = bootcampId ? [bootcampId] : (userData.activeBootcamps || (userData.bootcampId ? [userData.bootcampId] : []));
+        const userRole = role || userData.role;
+
+        for (const bcId of bootcamps) {
+          if (userRole === 'volunteer') {
+            await dbAdmin.collection('bootcamps').doc(bcId).collection('volunteers').doc(uid).set(dbUpdate, { merge: true }).catch(()=>{});
+          } else if (userRole === 'student') {
+            await dbAdmin.collection('bootcamps').doc(bcId).collection('students').doc(uid).set(dbUpdate, { merge: true }).catch(()=>{});
+            if (displayName) {
+              await dbAdmin.collection('bootcamps').doc(bcId).collection('leaderboard').doc(uid).set({ displayName, lastUpdated: new Date() }, { merge: true }).catch(()=>{});
+            }
+          }
+        }
+      }
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error updating user:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+

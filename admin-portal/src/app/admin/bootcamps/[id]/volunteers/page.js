@@ -31,6 +31,11 @@ export default function VolunteersPage() {
   const [isPreviewModalOpen, setPreviewModalOpen] = useState(false);
   const [isUploadingBatch, setIsUploadingBatch] = useState(false);
   const fileInputRef = useRef(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedUserForEdit, setSelectedUserForEdit] = useState(null);
+  const [editForm, setEditForm] = useState({ displayName: '', email: '' });
+  const [isEditingUser, setIsEditingUser] = useState(false);
+
   useEffect(() => {
     const loadBc = async () => {
       const bc = await getBootcamp(id);
@@ -101,10 +106,45 @@ export default function VolunteersPage() {
     }
   };
 
+  const handleEditUser = async (e) => {
+    e.preventDefault();
+    if (!selectedUserForEdit) return;
+
+    setIsEditingUser(true);
+    try {
+      const res = await fetch('/api/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          uid: selectedUserForEdit.uid || selectedUserForEdit.id,
+          displayName: editForm.displayName,
+          email: editForm.email,
+          role: 'volunteer',
+          bootcampId: id
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update user');
+
+      setEditModalOpen(false);
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setIsEditingUser(false);
+    }
+  };
+
   const openPasswordModal = (volunteer) => {
     setSelectedVolunteerForPassword(volunteer);
     setNewPassword('');
     setPasswordModalOpen(true);
+  };
+
+  const openEditModal = (volunteer) => {
+    setSelectedUserForEdit(volunteer);
+    setEditForm({ displayName: volunteer.displayName, email: volunteer.email });
+    setEditModalOpen(true);
   };
 
   const handleDelete = async (uid, name) => {
@@ -263,6 +303,14 @@ export default function VolunteersPage() {
                   </div>
                   <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
                     <button
+                      onClick={() => openEditModal(vol)}
+                      className="btn btn-secondary btn-sm"
+                      style={{ padding: '4px 8px' }}
+                      title="Edit Volunteer"
+                    >
+                      Edit
+                    </button>
+                    <button
                       onClick={() => openPasswordModal(vol)}
                       className="btn btn-secondary btn-sm"
                       style={{ padding: '4px 8px' }}
@@ -273,7 +321,7 @@ export default function VolunteersPage() {
                     <button 
                       className="btn btn-ghost btn-sm" 
                       style={{ color: '#ff4757', padding: '6px' }}
-                      onClick={() => handleDelete(vol.uid, vol.displayName)}
+                      onClick={() => handleDelete(vol.uid || vol.id, vol.displayName)}
                       title="Remove Volunteer"
                     >
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
@@ -345,6 +393,37 @@ export default function VolunteersPage() {
           </div>
           <button type="submit" className="btn btn-primary mt-4" disabled={isChangingPassword}>
             {isChangingPassword ? 'Updating...' : 'Update Password'}
+          </button>
+        </form>
+      </Modal>
+
+      <Modal
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        title={`Edit Volunteer: ${selectedUserForEdit?.displayName}`}
+      >
+        <form onSubmit={handleEditUser} className={styles.form}>
+          <div className="input-group">
+            <label>Display Name</label>
+            <input
+              required
+              className="input"
+              value={editForm.displayName}
+              onChange={e => setEditForm({ ...editForm, displayName: e.target.value })}
+            />
+          </div>
+          <div className="input-group">
+            <label>Email Address</label>
+            <input
+              required
+              type="email"
+              className="input"
+              value={editForm.email}
+              onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+            />
+          </div>
+          <button type="submit" className="btn btn-primary mt-4" disabled={isEditingUser}>
+            {isEditingUser ? 'Saving...' : 'Save Changes'}
           </button>
         </form>
       </Modal>
