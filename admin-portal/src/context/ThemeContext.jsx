@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 
 const SOCIETIES = {
   computer_society: {
@@ -41,6 +41,7 @@ const DEFAULT_THEME = {
   gradient: 'linear-gradient(135deg, #6C63FF 0%, #00D9FF 50%, #FF6584 100%)',
   glow: 'rgba(108, 99, 255, 0.3)',
   backgroundEffect: null,
+  fontFamily: 'Inter',
 };
 
 const ThemeContext = createContext(null);
@@ -49,7 +50,7 @@ export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(DEFAULT_THEME);
   const [society, setSociety] = useState(null);
 
-  const applyTheme = (bootcamp) => {
+  const applyTheme = useCallback((bootcamp) => {
     if (!bootcamp) {
       setTheme(DEFAULT_THEME);
       setSociety(null);
@@ -83,16 +84,22 @@ export function ThemeProvider({ children }) {
     root.style.setProperty('--color-text-secondary', mergedTheme.textSecondary || DEFAULT_THEME.textSecondary);
     root.style.setProperty('--color-gradient', mergedTheme.gradient);
     root.style.setProperty('--color-glow', mergedTheme.glow);
-  };
+    if (mergedTheme.fontFamily) {
+      root.style.setProperty('--font-sans', `'${mergedTheme.fontFamily}', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`);
+    } else {
+      root.style.removeProperty('--font-sans');
+    }
+  }, []);
 
-  const resetTheme = () => {
+  const resetTheme = useCallback(() => {
     setTheme(DEFAULT_THEME);
     setSociety(null);
     const root = document.documentElement;
     Object.keys(DEFAULT_THEME).forEach(key => {
       root.style.removeProperty(`--color-${key}`);
     });
-  };
+    root.style.removeProperty('--font-sans');
+  }, []);
 
   return (
     <ThemeContext.Provider value={{ theme, society, applyTheme, resetTheme }}>

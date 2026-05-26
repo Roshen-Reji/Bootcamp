@@ -12,11 +12,14 @@ const SettingsIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill=
 const LogoIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>;
 const LogoutIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>;
 const UsersIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>;
+const OrganisersIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>;
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: <DashboardIcon />, path: '/admin' },
+  { id: 'organisers', label: 'Organisers', icon: <OrganisersIcon />, path: '/admin/organisers' },
   { id: 'bootcamps', label: 'Bootcamps', icon: <BootcampsIcon />, path: '/admin/bootcamps' },
   { id: 'students', label: 'All Students', icon: <UsersIcon />, path: '/admin/students' },
+  { id: 'volunteers', label: 'All Volunteers', icon: <UsersIcon />, path: '/admin/volunteers' },
   { id: 'settings', label: 'Settings', icon: <SettingsIcon />, path: '/admin/settings' },
 ];
 
@@ -63,7 +66,9 @@ export default function AdminSidebar() {
         </div>
 
         <nav className={styles.nav}>
-          {NAV_ITEMS.map((item) => (
+          {NAV_ITEMS.map((item) => {
+            if (item.id === 'organisers' && user?.role !== 'admin') return null;
+            return (
             <motion.button
               key={item.id}
               className={`${styles.navItem} ${isActive(item.path) ? styles.active : ''}`}
@@ -90,10 +95,10 @@ export default function AdminSidebar() {
                   className={styles.activeIndicator}
                   layoutId="activeNav"
                   transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                />
+                  />
               )}
             </motion.button>
-          ))}
+          )})}
         </nav>
 
         <div className={styles.footer}>
@@ -110,8 +115,8 @@ export default function AdminSidebar() {
                   exit={{ opacity: 0, width: 0 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <span className={styles.userName}>{user?.displayName || 'Admin'}</span>
-                  <span className={styles.userRole}>Administrator</span>
+                  <span className={styles.userName}>{user?.displayName || 'User'}</span>
+                  <span className={styles.userRole}>{user?.role === 'admin' ? 'Administrator' : 'Organiser'}</span>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -129,7 +134,9 @@ export default function AdminSidebar() {
       </motion.aside>
 
       <nav className={styles.mobileNav}>
-        {NAV_ITEMS.map((item) => (
+        {NAV_ITEMS.map((item) => {
+          if (item.id === 'organisers' && user?.role !== 'admin') return null;
+          return (
           <button
             key={item.id}
             className={`${styles.mobileNavItem} ${isActive(item.path) ? styles.mobileActive : ''}`}
@@ -138,7 +145,7 @@ export default function AdminSidebar() {
           >
             <span className={styles.mobileNavIcon}>{item.icon}</span>
           </button>
-        ))}
+        )})}
       </nav>
     </>
   );

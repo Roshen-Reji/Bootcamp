@@ -8,7 +8,7 @@
   padding: var(--space-md);
 }
 
-/* Floating orbs */
+/* Floating ambient orbs — larger, softer, more cinematic */
 .orbContainer {
   position: fixed;
   inset: 0;
@@ -18,21 +18,23 @@
 
 .orb {
   position: absolute;
-  width: 500px;
-  height: 500px;
+  width: 600px;
+  height: 600px;
   border-radius: 50%;
-  top: 10%;
-  left: 10%;
-  filter: blur(60px);
+  top: 5%;
+  left: 5%;
+  filter: blur(80px);
+  opacity: 0.8;
 }
 
 .orb2 {
   top: auto;
-  bottom: 10%;
+  bottom: 5%;
   left: auto;
-  right: 10%;
-  width: 600px;
-  height: 600px;
+  right: 5%;
+  width: 700px;
+  height: 700px;
+  filter: blur(100px);
 }
 
 /* Login wrapper */
@@ -57,8 +59,8 @@
 }
 
 .logoIcon {
-  width: 72px;
-  height: 72px;
+  width: 76px;
+  height: 76px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -66,11 +68,30 @@
   border-radius: var(--radius-xl);
   font-size: 2rem;
   margin-bottom: var(--space-sm);
-  box-shadow: 0 8px 32px var(--color-glow);
+  box-shadow:
+    0 8px 32px var(--color-glow),
+    0 0 60px rgba(108, 99, 255, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  position: relative;
+}
+
+/* Pulse ring behind logo */
+.logoIcon::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: inherit;
+  border: 1px solid rgba(108, 99, 255, 0.2);
+  animation: logoPulse 3s ease-in-out infinite;
+}
+
+@keyframes logoPulse {
+  0%, 100% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(1.12); opacity: 0; }
 }
 
 .brandTitle {
-  font-size: 2rem;
+  font-size: 2.1rem;
   font-weight: 800;
   background: var(--color-gradient);
   -webkit-background-clip: text;
@@ -80,23 +101,39 @@
 }
 
 .brandSubtitle {
-  font-size: 0.9rem;
-  color: var(--color-text-secondary);
-  letter-spacing: 0.05em;
+  font-size: 0.85rem;
+  color: var(--color-text-tertiary);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   font-weight: 500;
 }
 
-/* Login Card */
+/* Login Card — deeper glass with inner shine */
 .loginCard {
   width: 100%;
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.025);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: var(--radius-xl);
-  box-shadow: var(--glass-shadow);
+  box-shadow:
+    0 16px 64px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
   padding: var(--space-xl);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Top-edge light streak */
+.loginCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 15%;
+  right: 15%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  pointer-events: none;
 }
 
 .form {
@@ -112,10 +149,10 @@
 }
 
 .label {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  color: var(--color-text-secondary);
-  letter-spacing: 0.04em;
+  color: var(--color-text-tertiary);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -130,14 +167,19 @@
   left: var(--space-md);
   font-size: 0.9rem;
   pointer-events: none;
-  opacity: 0.5;
+  opacity: 0.35;
+  transition: opacity var(--transition-fast);
+}
+
+.inputWrapper:focus-within .inputIcon {
+  opacity: 0.7;
 }
 
 .input {
   width: 100%;
-  padding: var(--space-md) var(--space-md) var(--space-md) 48px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--glass-border);
+  padding: 14px var(--space-md) 14px 48px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: var(--radius-md);
   color: var(--color-text);
   font-family: var(--font-sans);
@@ -148,8 +190,8 @@
 
 .input:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.15);
-  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.12), 0 0 24px rgba(108, 99, 255, 0.06);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .input::placeholder {
@@ -159,10 +201,10 @@
 /* Error */
 .error {
   padding: var(--space-sm) var(--space-md);
-  background: rgba(255, 71, 87, 0.1);
-  border: 1px solid rgba(255, 71, 87, 0.2);
+  background: rgba(255, 71, 87, 0.08);
+  border: 1px solid rgba(255, 71, 87, 0.15);
   border-radius: var(--radius-md);
-  color: #ff6b6b;
+  color: #ff6b78;
   font-size: 0.85rem;
   overflow: hidden;
 }
@@ -170,7 +212,7 @@
 /* Submit button */
 .submitBtn {
   width: 100%;
-  padding: var(--space-md) var(--space-lg);
+  padding: 14px var(--space-lg);
   background: var(--color-gradient);
   color: white;
   border: none;
@@ -183,18 +225,41 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-sm);
-  box-shadow: 0 4px 20px var(--color-glow);
-  transition: box-shadow var(--transition-base);
+  box-shadow:
+    0 6px 24px var(--color-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transition: all var(--transition-base);
   margin-top: var(--space-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.submitBtn::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.12), transparent);
+  transition: left 0.6s ease;
+}
+
+.submitBtn:hover::after {
+  left: 120%;
 }
 
 .submitBtn:hover {
-  box-shadow: 0 6px 30px var(--color-glow);
+  box-shadow:
+    0 10px 40px var(--color-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
 }
 
 .submitBtn:disabled {
-  opacity: 0.7;
+  opacity: 0.6;
   cursor: not-allowed;
+  transform: none;
 }
 
 .btnArrow {
@@ -209,7 +274,7 @@
 .btnSpinner {
   width: 20px;
   height: 20px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.25);
   border-top-color: white;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
@@ -221,7 +286,7 @@
 
 /* Footer */
 .footerText {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   color: var(--color-text-tertiary);
   text-align: center;
 }

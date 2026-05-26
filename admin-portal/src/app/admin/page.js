@@ -45,11 +45,13 @@ export default function AdminDashboard() {
   const [bootcamps, setBootcamps] = useState([]);
 
   useEffect(() => {
+    if (!user) return;
     const unsub = subscribeToBootcamps((data) => {
-      setBootcamps(data);
+      const filtered = user.role === 'organiser' ? data.filter(bc => bc.createdBy === user.uid) : data;
+      setBootcamps(filtered);
     });
     return () => unsub();
-  }, []);
+  }, [user]);
 
   const greeting = () => {
     const hour = new Date().getHours();

@@ -63,12 +63,12 @@ export default function CustomDropdown({ value, options, onChange, small = false
                             top: 'calc(100% + 4px)',
                             left: 0,
                             right: 0,
-                            background: 'rgba(20, 25, 35, 0.95)',
-                            backdropFilter: 'blur(16px)',
-                            border: '1px solid rgba(255, 255, 255, 0.1)',
-                            borderRadius: '8px',
+                            background: 'rgba(5, 5, 10, 0.95)',
+                            backdropFilter: 'blur(24px)',
+                            border: '1px solid rgba(255, 255, 255, 0.08)',
+                            borderRadius: '12px',
                             overflow: 'hidden',
-                            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+                            boxShadow: '0 16px 40px -8px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
                             maxHeight: '250px',
                             overflowY: 'auto'
                         }}

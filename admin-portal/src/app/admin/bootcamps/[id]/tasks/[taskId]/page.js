@@ -160,6 +160,12 @@ export default function TaskDetailPage() {
                     {task.submissionTypes?.map(t => <span key={t} className="badge">{t}</span>)}
                   </div>
                 </div>
+                <div className={styles.detailItem}>
+                  <span className={styles.detailLabel}>Deadline</span>
+                  <span className={styles.detailValue}>
+                    {task.deadline ? new Date(task.deadline).toLocaleString() : 'No Deadline'}
+                  </span>
+                </div>
               </div>
               {task.guidelines && (
                 <div className={styles.guidelines}>

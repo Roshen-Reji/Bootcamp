@@ -60,6 +60,7 @@ export function AuthProvider({ children }) {
       refreshBootcamp,
       isAdmin: user?.role === 'admin',
       isVolunteer: user?.role === 'volunteer',
+      isOrganiser: user?.role === 'organiser',
     }}>
       {children}
     </AuthContext.Provider>
