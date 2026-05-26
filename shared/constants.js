@@ -20,6 +20,7 @@ export const TASK_LEVELS = {
 };
 
 export const SUBMISSION_TYPES = {
+  LINK: 'link',
   TEXT: 'text',
   IMAGE: 'image',
   VIDEO: 'video',

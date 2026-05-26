@@ -6,8 +6,18 @@ import { motion } from 'framer-motion';
 import { getBootcamp, updateBootcamp } from '@/lib/db';
 import SocietyBackground from '@/components/backgrounds/SocietyBackground';
 import GlassCard from '@/components/ui/GlassCard';
+import Modal from '@/components/ui/Modal';
+import CustomDropdown from '@/components/ui/CustomDropdown';
 import { getSocietyLabel } from '@/shared/societies';
 import styles from './page.module.css';
+
+const SOCIETIES = [
+  { id: 'computer_society', name: 'Computer Society', icon: '💻', color: '#0076D6' },
+  { id: 'student_branch', name: 'Student Branch', icon: '🎓', color: '#00629B' },
+  { id: 'women_in_engineering', name: 'Women In Engineering', icon: '👩‍💻', color: '#6B2D8B' },
+  { id: 'robotics', name: 'Robotics & Automation', icon: '🤖', color: '#E74C3C' },
+  { id: 'industrial_applications', name: 'Industrial Applications', icon: '⚙️', color: '#F39C12' },
+];
 
 const TABS = [
   { id: 'overview', label: 'Overview', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> },
@@ -24,6 +34,20 @@ export default function BootcampDetailPage() {
   const [bootcamp, setBootcamp] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(true);
+
+  // Edit bootcamp modal
+  const [isEditModalOpen, setEditModalOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: '', description: '', icon: '',
+    society: [],
+    colorTheme: { primary: '#6C63FF', secondary: '#FF6584', accent: '#00D9FF', fontFamily: 'Inter' },
+    teamConfig: { enabled: false, individualSubmissions: true },
+  });
+
+  // Delete confirmation
+  const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteConfirmName, setDeleteConfirmName] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const loadBootcamp = async () => {
@@ -47,6 +71,70 @@ export default function BootcampDetailPage() {
         console.error(err);
       }
     }
+  };
+
+  const handleUnarchive = async () => {
+    if (confirm('Are you sure you want to reactivate this bootcamp?')) {
+      try {
+        await updateBootcamp(id, { status: 'active' });
+        setBootcamp({ ...bootcamp, status: 'active' });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
+
+  const handlePermanentDelete = async () => {
+    if (deleteConfirmName !== bootcamp.name) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/bootcamps/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to delete bootcamp');
+      }
+      router.push('/admin/bootcamps');
+    } catch (err) {
+      console.error(err);
+      alert(err.message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const openEditModal = () => {
+    setEditForm({
+      name: bootcamp.name || '',
+      description: bootcamp.description || '',
+      icon: bootcamp.icon || '',
+      society: bootcamp.society || [],
+      colorTheme: bootcamp.colorTheme || { primary: '#6C63FF', secondary: '#FF6584', accent: '#00D9FF', fontFamily: 'Inter' },
+      teamConfig: bootcamp.teamConfig || { enabled: false, individualSubmissions: true },
+    });
+    setEditModalOpen(true);
+  };
+
+  const handleUpdateBootcamp = async (e) => {
+    e.preventDefault();
+    if (!editForm.name || editForm.society.length === 0) return;
+    try {
+      await updateBootcamp(id, editForm);
+      setBootcamp({ ...bootcamp, ...editForm });
+      setEditModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update bootcamp.');
+    }
+  };
+
+  const toggleEditSociety = (societyId) => {
+    let current = [...editForm.society];
+    if (current.includes(societyId)) {
+      current = current.filter(s => s !== societyId);
+    } else {
+      current.push(societyId);
+    }
+    setEditForm({ ...editForm, society: current });
   };
 
   if (loading) {
@@ -131,6 +219,9 @@ export default function BootcampDetailPage() {
                 Quick Actions
               </h3>
               <div className={styles.quickActions}>
+                <button className="btn btn-secondary" onClick={openEditModal}>
+                  ✏️ Edit Bootcamp
+                </button>
                 <button className="btn btn-primary" onClick={() => router.push(`/admin/bootcamps/${id}/volunteers`)}>
                   + Add Volunteer
                 </button>
@@ -140,16 +231,186 @@ export default function BootcampDetailPage() {
                 <button className="btn btn-secondary" onClick={() => router.push(`/admin/bootcamps/${id}/tasks`)}>
                   + Create Task
                 </button>
-                {bootcamp.status !== 'archived' && (
-                  <button className="btn btn-ghost" style={{color: '#ff4757', borderColor: '#ff4757'}} onClick={handleArchive}>
-                    Archive Bootcamp
+                {bootcamp.status === 'active' && (
+                  <button className="btn btn-ghost" style={{color: '#ffa502', borderColor: '#ffa502'}} onClick={handleArchive}>
+                    📦 Archive Bootcamp
                   </button>
                 )}
+                {bootcamp.status === 'archived' && (
+                  <button className="btn btn-ghost" style={{color: '#2ed573', borderColor: '#2ed573'}} onClick={handleUnarchive}>
+                    🔄 Unarchive Bootcamp
+                  </button>
+                )}
+                <button
+                  className="btn btn-ghost"
+                  style={{color: '#ff4757', borderColor: '#ff4757'}}
+                  onClick={() => { setDeleteConfirmName(''); setDeleteModalOpen(true); }}
+                >
+                  🗑️ Delete Permanently
+                </button>
               </div>
             </GlassCard>
+
+            {/* Bootcamp Info */}
+            {bootcamp.description && (
+              <GlassCard hover={false} padding="lg">
+                <h3 className={styles.sectionTitle}>Description</h3>
+                <p style={{ color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>{bootcamp.description}</p>
+              </GlassCard>
+            )}
           </motion.div>
         )}
       </motion.div>
+
+      {/* Edit Bootcamp Modal */}
+      <Modal isOpen={isEditModalOpen} onClose={() => setEditModalOpen(false)} title="Edit Bootcamp" maxWidth="700px">
+        <form onSubmit={handleUpdateBootcamp} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="input-group">
+            <label>Bootcamp Name *</label>
+            <input required className="input" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} />
+          </div>
+          <div className="input-group">
+            <label>Description</label>
+            <textarea className="textarea" value={editForm.description} onChange={e => setEditForm({ ...editForm, description: e.target.value })} rows={3} />
+          </div>
+          <div className="input-group">
+            <label>Custom Icon (emoji)</label>
+            <input className="input" value={editForm.icon} onChange={e => setEditForm({ ...editForm, icon: e.target.value })} maxLength={4} />
+          </div>
+
+          {/* Societies */}
+          <div className="input-group">
+            <label>Societies *</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+              {SOCIETIES.map(s => (
+                <button
+                  key={s.id}
+                  type="button"
+                  style={{
+                    padding: '8px 16px', borderRadius: '8px', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    background: editForm.society.includes(s.id) ? `${s.color}20` : 'rgba(255,255,255,0.05)',
+                    border: `2px solid ${editForm.society.includes(s.id) ? s.color : 'rgba(255,255,255,0.1)'}`,
+                    color: editForm.society.includes(s.id) ? s.color : 'var(--color-text-secondary)',
+                    transition: 'all 0.2s',
+                  }}
+                  onClick={() => toggleEditSociety(s.id)}
+                >
+                  <span>{s.icon}</span>
+                  <span style={{ fontSize: '0.85rem' }}>{s.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Colors */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+            <div className="input-group">
+              <label>Primary</label>
+              <input type="color" className="input" value={editForm.colorTheme.primary} style={{ height: '40px', padding: '4px' }}
+                onChange={e => setEditForm({ ...editForm, colorTheme: { ...editForm.colorTheme, primary: e.target.value } })} />
+            </div>
+            <div className="input-group">
+              <label>Secondary</label>
+              <input type="color" className="input" value={editForm.colorTheme.secondary} style={{ height: '40px', padding: '4px' }}
+                onChange={e => setEditForm({ ...editForm, colorTheme: { ...editForm.colorTheme, secondary: e.target.value } })} />
+            </div>
+            <div className="input-group">
+              <label>Accent</label>
+              <input type="color" className="input" value={editForm.colorTheme.accent} style={{ height: '40px', padding: '4px' }}
+                onChange={e => setEditForm({ ...editForm, colorTheme: { ...editForm.colorTheme, accent: e.target.value } })} />
+            </div>
+          </div>
+
+          {/* Team Config */}
+          <div className="input-group">
+            <label style={{ display: 'block', marginBottom: '8px' }}>Team Configuration</label>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {[
+                { label: '👤 Individual', config: { enabled: false, individualSubmissions: true } },
+                { label: '👥 Team + Individual', config: { enabled: true, individualSubmissions: true } },
+                { label: '🤝 Team + Collective', config: { enabled: true, individualSubmissions: false } },
+              ].map(opt => {
+                const isSelected = editForm.teamConfig.enabled === opt.config.enabled &&
+                  editForm.teamConfig.individualSubmissions === opt.config.individualSubmissions;
+                return (
+                  <button
+                    key={opt.label}
+                    type="button"
+                    style={{
+                      padding: '8px 16px', borderRadius: '8px', cursor: 'pointer',
+                      background: isSelected ? 'var(--color-primary)' : 'rgba(255,255,255,0.05)',
+                      color: isSelected ? '#fff' : 'var(--color-text-secondary)',
+                      border: `1px solid ${isSelected ? 'var(--color-primary)' : 'rgba(255,255,255,0.1)'}`,
+                      transition: 'all 0.2s',
+                    }}
+                    onClick={() => setEditForm({ ...editForm, teamConfig: opt.config })}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <button type="submit" className="btn btn-primary" style={{ marginTop: '8px' }} disabled={!editForm.name || editForm.society.length === 0}>
+            Save Changes
+          </button>
+        </form>
+      </Modal>
+
+      {/* Permanent Delete Confirmation Modal */}
+      <Modal isOpen={isDeleteModalOpen} onClose={() => setDeleteModalOpen(false)} title="⚠️ Permanently Delete Bootcamp">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{
+            padding: '16px', borderRadius: '8px',
+            background: 'rgba(255, 71, 87, 0.1)', border: '1px solid rgba(255, 71, 87, 0.3)',
+          }}>
+            <p style={{ color: '#ff4757', fontWeight: '600', marginBottom: '8px' }}>
+              This action is irreversible!
+            </p>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem', lineHeight: 1.5 }}>
+              This will permanently delete <strong style={{ color: 'var(--color-text)' }}>{bootcamp.name}</strong> and all associated data including:
+            </p>
+            <ul style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem', marginTop: '8px', paddingLeft: '20px' }}>
+              <li>All students enrolled in this bootcamp</li>
+              <li>All volunteer assignments</li>
+              <li>All tasks, tutorials, and subtasks</li>
+              <li>All submissions and leaderboard data</li>
+              <li>All team data</li>
+            </ul>
+          </div>
+
+          <div className="input-group">
+            <label>Type <strong style={{ color: '#ff4757' }}>{bootcamp.name}</strong> to confirm:</label>
+            <input
+              className="input"
+              placeholder="Type bootcamp name to confirm"
+              value={deleteConfirmName}
+              onChange={e => setDeleteConfirmName(e.target.value)}
+              style={{ borderColor: deleteConfirmName === bootcamp.name ? '#2ed573' : undefined }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <button className="btn btn-ghost" onClick={() => setDeleteModalOpen(false)}>
+              Cancel
+            </button>
+            <button
+              className="btn"
+              style={{
+                background: deleteConfirmName === bootcamp.name ? '#ff4757' : 'rgba(255,71,87,0.2)',
+                color: '#fff',
+                cursor: deleteConfirmName === bootcamp.name ? 'pointer' : 'not-allowed',
+              }}
+              disabled={deleteConfirmName !== bootcamp.name || isDeleting}
+              onClick={handlePermanentDelete}
+            >
+              {isDeleting ? 'Deleting...' : '🗑️ Delete Forever'}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

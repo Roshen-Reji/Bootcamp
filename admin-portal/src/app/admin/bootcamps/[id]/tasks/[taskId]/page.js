@@ -5,14 +5,19 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
-import { getBootcamp, subscribeToTutorials, subscribeToSubtasks, createTutorial, createSubtask, deleteTask, deleteTutorial } from '@/lib/db';
+import {
+  getBootcamp, subscribeToTutorials, subscribeToSubtasks,
+  createTutorial, createSubtask, deleteTask, deleteTutorial,
+  updateTask, updateTutorial, updateSubtask, deleteSubtask
+} from '@/lib/db';
 import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import SocietyBackground from '@/components/backgrounds/SocietyBackground';
 import GlassCard from '@/components/ui/GlassCard';
 import Modal from '@/components/ui/Modal';
 import CustomDropdown from '@/components/ui/CustomDropdown';
-import { TUTORIAL_CONTENT_TYPES, SUBMISSION_TYPES } from '@/shared/constants';
+import { TUTORIAL_CONTENT_TYPES, SUBMISSION_TYPES, TASK_LEVELS, ASSIGNMENT_MODES } from '@/shared/constants';
+import { validateTutorialLink } from '@/lib/linkValidator';
 import styles from './page.module.css';
 
 export default function TaskDetailPage() {
@@ -30,10 +35,25 @@ export default function TaskDetailPage() {
   const [isSubtaskModalOpen, setSubtaskModalOpen] = useState(false);
   const [selectedTutorialId, setSelectedTutorialId] = useState(null);
 
+  // Link validation warning
+  const [linkWarning, setLinkWarning] = useState(null); // { message, onBypass }
+
+  // Edit states
+  const [isEditTaskModalOpen, setEditTaskModalOpen] = useState(false);
+  const [isEditTutorialModalOpen, setEditTutorialModalOpen] = useState(false);
+  const [isEditSubtaskModalOpen, setEditSubtaskModalOpen] = useState(false);
+  const [editingTutorial, setEditingTutorial] = useState(null);
+  const [editingSubtask, setEditingSubtask] = useState(null);
+
   const [tutorialForm, setTutorialForm] = useState({ title: '', description: '', content: [{ type: 'link', value: '' }] });
   
-  // Changed default submissionType to 'link'
   const [subtaskForm, setSubtaskForm] = useState({ title: '', description: '', points: 10, submissionType: 'link', multichoiceOptions: [{ text: '', isCorrect: true }] });
+
+  // Edit task form
+  const [editTaskForm, setEditTaskForm] = useState({
+    title: '', description: '', level: 'beginner', points: 100,
+    guidelines: '', deadline: '', submissionTypes: ['text'], assignmentMode: 'random'
+  });
 
   useEffect(() => {
     const loadData = async () => {
@@ -54,9 +74,32 @@ export default function TaskDetailPage() {
     };
   }, [id, taskId]);
 
+  // --- Tutorial CRUD ---
+
   const handleCreateTutorial = async (e) => {
     e.preventDefault();
     if (!tutorialForm.title) return;
+
+    // Validate tutorial link
+    const contentType = tutorialForm.content[0].type;
+    const contentUrl = tutorialForm.content[0].value;
+    const validation = validateTutorialLink(contentType, contentUrl);
+
+    if (!validation.valid) {
+      setLinkWarning({
+        message: validation.message,
+        onBypass: async () => {
+          setLinkWarning(null);
+          await saveTutorial();
+        }
+      });
+      return;
+    }
+
+    await saveTutorial();
+  };
+
+  const saveTutorial = async () => {
     try {
       await createTutorial(id, taskId, {
         ...tutorialForm,
@@ -70,6 +113,72 @@ export default function TaskDetailPage() {
     }
   };
 
+  const handleEditTutorial = (tut) => {
+    setEditingTutorial(tut);
+    setTutorialForm({
+      title: tut.title || '',
+      description: tut.description || '',
+      content: tut.content || [{ type: 'link', value: '' }],
+    });
+    setEditTutorialModalOpen(true);
+  };
+
+  const handleUpdateTutorial = async (e) => {
+    e.preventDefault();
+    if (!editingTutorial || !tutorialForm.title) return;
+
+    // Validate link
+    const contentType = tutorialForm.content[0].type;
+    const contentUrl = tutorialForm.content[0].value;
+    const validation = validateTutorialLink(contentType, contentUrl);
+
+    if (!validation.valid) {
+      setLinkWarning({
+        message: validation.message,
+        onBypass: async () => {
+          setLinkWarning(null);
+          await saveEditTutorial();
+        }
+      });
+      return;
+    }
+
+    await saveEditTutorial();
+  };
+
+  const saveEditTutorial = async () => {
+    try {
+      await updateTutorial(id, taskId, editingTutorial.id, {
+        title: tutorialForm.title,
+        description: tutorialForm.description,
+        content: tutorialForm.content,
+      });
+      setEditTutorialModalOpen(false);
+      setEditingTutorial(null);
+      setTutorialForm({ title: '', description: '', content: [{ type: 'link', value: '' }] });
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update tutorial.');
+    }
+  };
+
+  const handleDeleteTutorial = async (tutorialId) => {
+    if (!confirm('Are you sure you want to delete this tutorial and its subtasks?')) return;
+    try {
+      // Delete associated subtasks first
+      const relatedSubtasks = subtasks.filter(s => s.tutorialId === tutorialId);
+      for (const sub of relatedSubtasks) {
+        await deleteSubtask(id, taskId, sub.id);
+      }
+      await deleteTutorial(id, taskId, tutorialId);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to delete tutorial.');
+    }
+  };
+
+  // --- Subtask CRUD ---
+
   const handleCreateSubtask = async (e) => {
     e.preventDefault();
     if (!subtaskForm.title || !selectedTutorialId) return;
@@ -81,12 +190,55 @@ export default function TaskDetailPage() {
         createdBy: user.uid,
       });
       setSubtaskModalOpen(false);
-      // Changed default back to 'link' on successful save
       setSubtaskForm({ title: '', description: '', points: 10, submissionType: 'link', multichoiceOptions: [{ text: '', isCorrect: true }] });
     } catch (err) {
       console.error(err);
     }
   };
+
+  const handleEditSubtask = (sub) => {
+    setEditingSubtask(sub);
+    setSubtaskForm({
+      title: sub.title || '',
+      description: sub.description || '',
+      points: sub.points || 10,
+      submissionType: sub.submissionType || 'link',
+      multichoiceOptions: sub.multichoiceOptions || [{ text: '', isCorrect: true }],
+    });
+    setEditSubtaskModalOpen(true);
+  };
+
+  const handleUpdateSubtask = async (e) => {
+    e.preventDefault();
+    if (!editingSubtask || !subtaskForm.title) return;
+    try {
+      await updateSubtask(id, taskId, editingSubtask.id, {
+        title: subtaskForm.title,
+        description: subtaskForm.description,
+        points: subtaskForm.points,
+        submissionType: subtaskForm.submissionType,
+        ...(subtaskForm.submissionType === 'multichoice' ? { multichoiceOptions: subtaskForm.multichoiceOptions } : {}),
+      });
+      setEditSubtaskModalOpen(false);
+      setEditingSubtask(null);
+      setSubtaskForm({ title: '', description: '', points: 10, submissionType: 'link', multichoiceOptions: [{ text: '', isCorrect: true }] });
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update subtask.');
+    }
+  };
+
+  const handleDeleteSubtask = async (subtaskId) => {
+    if (!confirm('Are you sure you want to delete this subtask?')) return;
+    try {
+      await deleteSubtask(id, taskId, subtaskId);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to delete subtask.');
+    }
+  };
+
+  // --- Task CRUD ---
 
   const handleDeleteTask = async () => {
     if (!confirm('Are you sure you want to completely delete this task? This cannot be undone.')) return;
@@ -99,17 +251,152 @@ export default function TaskDetailPage() {
     }
   };
 
-  const handleDeleteTutorial = async (tutorialId) => {
-    if (!confirm('Are you sure you want to delete this tutorial?')) return;
+  const openEditTaskModal = () => {
+    setEditTaskForm({
+      title: task.title || '',
+      description: task.description || '',
+      level: task.level || 'beginner',
+      points: task.points || 100,
+      guidelines: task.guidelines || '',
+      deadline: task.deadline || '',
+      submissionTypes: task.submissionTypes || ['text'],
+      assignmentMode: task.assignmentMode || 'random',
+    });
+    setEditTaskModalOpen(true);
+  };
+
+  const handleUpdateTask = async (e) => {
+    e.preventDefault();
+    if (!editTaskForm.title || editTaskForm.submissionTypes.length === 0) return;
     try {
-      await deleteTutorial(id, taskId, tutorialId);
+      await updateTask(id, taskId, editTaskForm);
+      setTask({ ...task, ...editTaskForm });
+      setEditTaskModalOpen(false);
     } catch (err) {
       console.error(err);
-      alert('Failed to delete tutorial.');
+      alert('Failed to update task.');
     }
   };
 
+  const toggleEditSubmissionType = (type) => {
+    setEditTaskForm(prev => {
+      const types = [...prev.submissionTypes];
+      if (types.includes(type)) {
+        return { ...prev, submissionTypes: types.filter(t => t !== type) };
+      }
+      return { ...prev, submissionTypes: [...types, type] };
+    });
+  };
+
   if (!bootcamp || !task) return null;
+
+  // --- Render helpers ---
+  const renderSubtaskForm = (formData, setFormData, isEdit = false) => (
+    <>
+      <div className="input-group">
+        <label>Subtask Title</label>
+        <input required className="input" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} />
+      </div>
+      <div className="input-group">
+        <label>Points</label>
+        <input type="number" required className="input" value={formData.points} onChange={e => setFormData({ ...formData, points: Number(e.target.value) })} />
+      </div>
+      <div className="input-group">
+        <label style={{ display: 'block', marginBottom: '8px' }}>Submission Type</label>
+        <CustomDropdown
+          value={formData.submissionType}
+          onChange={val => setFormData({ ...formData, submissionType: val })}
+          options={Object.values(SUBMISSION_TYPES).map(t => ({ value: t, label: t.charAt(0).toUpperCase() + t.slice(1) }))}
+        />
+      </div>
+      {formData.submissionType === 'multichoice' && (
+        <div className="input-group">
+          <label>Options</label>
+          {formData.multichoiceOptions.map((opt, idx) => (
+            <div key={idx} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+              <input
+                type="checkbox"
+                checked={opt.isCorrect}
+                onChange={e => {
+                  const opts = [...formData.multichoiceOptions];
+                  opts[idx].isCorrect = e.target.checked;
+                  setFormData({ ...formData, multichoiceOptions: opts });
+                }}
+                title="Is Correct?"
+              />
+              <input
+                required
+                className="input"
+                placeholder={`Option ${idx + 1}`}
+                value={opt.text}
+                onChange={e => {
+                  const opts = [...formData.multichoiceOptions];
+                  opts[idx].text = e.target.value;
+                  setFormData({ ...formData, multichoiceOptions: opts });
+                }}
+              />
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => {
+                  const opts = formData.multichoiceOptions.filter((_, i) => i !== idx);
+                  setFormData({ ...formData, multichoiceOptions: opts });
+                }}
+                title="Remove Option"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={() => {
+              setFormData({
+                ...formData,
+                multichoiceOptions: [...formData.multichoiceOptions, { text: '', isCorrect: false }]
+              });
+            }}
+          >
+            + Add Option
+          </button>
+        </div>
+      )}
+    </>
+  );
+
+  const renderTutorialForm = (formData, setFormData) => (
+    <>
+      <div className="input-group">
+        <label>Tutorial Title</label>
+        <input required className="input" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} />
+      </div>
+      <div className="input-group">
+        <label>Description</label>
+        <textarea className="textarea" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
+      </div>
+      <div className="input-group">
+        <label style={{ display: 'block', marginBottom: '8px' }}>Content Type</label>
+        <CustomDropdown
+          value={formData.content[0].type}
+          onChange={val => {
+            const newContent = [...formData.content];
+            newContent[0].type = val;
+            setFormData({ ...formData, content: newContent });
+          }}
+          options={Object.values(TUTORIAL_CONTENT_TYPES).map(t => ({ value: t, label: t.charAt(0).toUpperCase() + t.slice(1) }))}
+        />
+      </div>
+      <div className="input-group">
+        <label>URL / Content</label>
+        <input required className="input" placeholder="https://..." value={formData.content[0].value} onChange={e => {
+          const newContent = [...formData.content];
+          newContent[0].value = e.target.value;
+          setFormData({ ...formData, content: newContent });
+        }} />
+      </div>
+    </>
+  );
 
   return (
     <div className={styles.container}>
@@ -130,9 +417,14 @@ export default function TaskDetailPage() {
               <h1 className={styles.title}>{task.title}</h1>
               <span className="badge badge-primary">{task.level}</span>
             </div>
-            <button className="btn btn-ghost btn-sm" style={{ color: '#ff4757', border: '1px solid rgba(255,71,87,0.3)' }} onClick={handleDeleteTask}>
-              🗑️ Delete Task
-            </button>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button className="btn btn-secondary btn-sm" onClick={openEditTaskModal}>
+                ✏️ Edit Task
+              </button>
+              <button className="btn btn-ghost btn-sm" style={{ color: '#ff4757', border: '1px solid rgba(255,71,87,0.3)' }} onClick={handleDeleteTask}>
+                🗑️ Delete Task
+              </button>
+            </div>
           </div>
 
           <p className={styles.subtitle}>{task.description}</p>
@@ -206,6 +498,13 @@ export default function TaskDetailPage() {
                         <div style={{ display: 'flex', gap: '8px' }}>
                           <button
                             className="btn btn-ghost btn-sm"
+                            style={{ color: 'var(--color-primary)' }}
+                            onClick={() => handleEditTutorial(tut)}
+                          >
+                            ✏️ Edit
+                          </button>
+                          <button
+                            className="btn btn-ghost btn-sm"
                             style={{ color: '#ff4757' }}
                             onClick={() => handleDeleteTutorial(tut.id)}
                           >
@@ -215,6 +514,7 @@ export default function TaskDetailPage() {
                             className="btn btn-secondary btn-sm"
                             onClick={() => {
                               setSelectedTutorialId(tut.id);
+                              setSubtaskForm({ title: '', description: '', points: 10, submissionType: 'link', multichoiceOptions: [{ text: '', isCorrect: true }] });
                               setSubtaskModalOpen(true);
                             }}
                           >
@@ -241,7 +541,25 @@ export default function TaskDetailPage() {
                                 <span className={styles.subType}>{sub.submissionType}</span>
                               </div>
                             </div>
-                            <span className={styles.subPoints}>{sub.points} pts</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span className={styles.subPoints}>{sub.points} pts</span>
+                              <button
+                                className="btn btn-ghost btn-sm"
+                                style={{ padding: '4px', color: 'var(--color-primary)' }}
+                                onClick={() => handleEditSubtask(sub)}
+                                title="Edit Subtask"
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                              </button>
+                              <button
+                                className="btn btn-ghost btn-sm"
+                                style={{ padding: '4px', color: '#ff4757' }}
+                                onClick={() => handleDeleteSubtask(sub.id)}
+                                title="Delete Subtask"
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                              </button>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -254,115 +572,143 @@ export default function TaskDetailPage() {
         </div>
       </motion.div>
 
-      {/* Tutorial Modal */}
+      {/* Tutorial Modal - Create */}
       <Modal isOpen={isTutorialModalOpen} onClose={() => setTutorialModalOpen(false)} title="Add Tutorial">
         <form onSubmit={handleCreateTutorial} className="flex-col gap-md">
-          <div className="input-group">
-            <label>Tutorial Title</label>
-            <input required className="input" value={tutorialForm.title} onChange={e => setTutorialForm({ ...tutorialForm, title: e.target.value })} />
-          </div>
-          <div className="input-group">
-            <label>Description</label>
-            <textarea className="textarea" value={tutorialForm.description} onChange={e => setTutorialForm({ ...tutorialForm, description: e.target.value })} />
-          </div>
-          <div className="input-group">
-            <label style={{ display: 'block', marginBottom: '8px' }}>Content Type</label>
-            <CustomDropdown
-              value={tutorialForm.content[0].type}
-              onChange={val => {
-                const newContent = [...tutorialForm.content];
-                newContent[0].type = val;
-                setTutorialForm({ ...tutorialForm, content: newContent });
-              }}
-              options={Object.values(TUTORIAL_CONTENT_TYPES).map(t => ({ value: t, label: t.charAt(0).toUpperCase() + t.slice(1) }))}
-            />
-          </div>
-          <div className="input-group">
-            <label>URL / Content</label>
-            <input required className="input" placeholder="https://..." value={tutorialForm.content[0].value} onChange={e => {
-              const newContent = [...tutorialForm.content];
-              newContent[0].value = e.target.value;
-              setTutorialForm({ ...tutorialForm, content: newContent });
-            }} />
-          </div>
+          {renderTutorialForm(tutorialForm, setTutorialForm)}
           <button type="submit" className="btn btn-primary mt-4">Save Tutorial</button>
         </form>
       </Modal>
 
-      {/* Subtask Modal */}
+      {/* Tutorial Modal - Edit */}
+      <Modal isOpen={isEditTutorialModalOpen} onClose={() => { setEditTutorialModalOpen(false); setEditingTutorial(null); }} title="Edit Tutorial">
+        <form onSubmit={handleUpdateTutorial} className="flex-col gap-md">
+          {renderTutorialForm(tutorialForm, setTutorialForm)}
+          <button type="submit" className="btn btn-primary mt-4">Update Tutorial</button>
+        </form>
+      </Modal>
+
+      {/* Subtask Modal - Create */}
       <Modal isOpen={isSubtaskModalOpen} onClose={() => setSubtaskModalOpen(false)} title="Add Subtask">
         <form onSubmit={handleCreateSubtask} className="flex-col gap-md">
-          <div className="input-group">
-            <label>Subtask Title</label>
-            <input required className="input" value={subtaskForm.title} onChange={e => setSubtaskForm({ ...subtaskForm, title: e.target.value })} />
-          </div>
-          <div className="input-group">
-            <label>Points</label>
-            <input type="number" required className="input" value={subtaskForm.points} onChange={e => setSubtaskForm({ ...subtaskForm, points: Number(e.target.value) })} />
-          </div>
-          <div className="input-group">
-            <label style={{ display: 'block', marginBottom: '8px' }}>Submission Type</label>
-            <CustomDropdown
-              value={subtaskForm.submissionType}
-              onChange={val => setSubtaskForm({ ...subtaskForm, submissionType: val })}
-              options={Object.values(SUBMISSION_TYPES).map(t => ({ value: t, label: t.charAt(0).toUpperCase() + t.slice(1) }))}
-            />
-          </div>
-          {subtaskForm.submissionType === 'multichoice' && (
-            <div className="input-group">
-              <label>Options</label>
-              {subtaskForm.multichoiceOptions.map((opt, idx) => (
-                <div key={idx} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                  <input
-                    type="checkbox"
-                    checked={opt.isCorrect}
-                    onChange={e => {
-                      const opts = [...subtaskForm.multichoiceOptions];
-                      opts[idx].isCorrect = e.target.checked;
-                      setSubtaskForm({ ...subtaskForm, multichoiceOptions: opts });
-                    }}
-                    title="Is Correct?"
-                  />
-                  <input
-                    required
-                    className="input"
-                    placeholder={`Option ${idx + 1}`}
-                    value={opt.text}
-                    onChange={e => {
-                      const opts = [...subtaskForm.multichoiceOptions];
-                      opts[idx].text = e.target.value;
-                      setSubtaskForm({ ...subtaskForm, multichoiceOptions: opts });
-                    }}
-                  />
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-sm"
-                    onClick={() => {
-                      const opts = subtaskForm.multichoiceOptions.filter((_, i) => i !== idx);
-                      setSubtaskForm({ ...subtaskForm, multichoiceOptions: opts });
-                    }}
-                    title="Remove Option"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-                  </button>
-                </div>
-              ))}
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm"
-                onClick={() => {
-                  setSubtaskForm({
-                    ...subtaskForm,
-                    multichoiceOptions: [...subtaskForm.multichoiceOptions, { text: '', isCorrect: false }]
-                  });
-                }}
-              >
-                + Add Option
-              </button>
-            </div>
-          )}
+          {renderSubtaskForm(subtaskForm, setSubtaskForm)}
           <button type="submit" className="btn btn-primary mt-4">Save Subtask</button>
         </form>
+      </Modal>
+
+      {/* Subtask Modal - Edit */}
+      <Modal isOpen={isEditSubtaskModalOpen} onClose={() => { setEditSubtaskModalOpen(false); setEditingSubtask(null); }} title="Edit Subtask">
+        <form onSubmit={handleUpdateSubtask} className="flex-col gap-md">
+          {renderSubtaskForm(subtaskForm, setSubtaskForm, true)}
+          <button type="submit" className="btn btn-primary mt-4">Update Subtask</button>
+        </form>
+      </Modal>
+
+      {/* Edit Task Modal */}
+      <Modal isOpen={isEditTaskModalOpen} onClose={() => setEditTaskModalOpen(false)} title="Edit Task">
+        <form onSubmit={handleUpdateTask} className="flex-col gap-md">
+          <div className="input-group">
+            <label>Task Title *</label>
+            <input required className="input" value={editTaskForm.title} onChange={e => setEditTaskForm({ ...editTaskForm, title: e.target.value })} />
+          </div>
+          <div className="input-group">
+            <label>Description *</label>
+            <textarea required className="textarea" value={editTaskForm.description} onChange={e => setEditTaskForm({ ...editTaskForm, description: e.target.value })} rows={3} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="input-group">
+              <label style={{ display: 'block', marginBottom: '8px' }}>Difficulty Level</label>
+              <CustomDropdown
+                value={editTaskForm.level}
+                onChange={val => setEditTaskForm({ ...editTaskForm, level: val })}
+                options={[
+                  { value: TASK_LEVELS.BEGINNER, label: 'Beginner' },
+                  { value: TASK_LEVELS.INTERMEDIATE, label: 'Intermediate' },
+                  { value: TASK_LEVELS.ADVANCED, label: 'Advanced' }
+                ]}
+              />
+            </div>
+            <div className="input-group">
+              <label>Points</label>
+              <input type="number" min="0" className="input" value={editTaskForm.points} onChange={e => setEditTaskForm({ ...editTaskForm, points: parseInt(e.target.value) || 0 })} />
+            </div>
+          </div>
+          <div className="input-group">
+            <label>Guidelines</label>
+            <textarea className="textarea" value={editTaskForm.guidelines} onChange={e => setEditTaskForm({ ...editTaskForm, guidelines: e.target.value })} rows={3} />
+          </div>
+          <div className="input-group">
+            <label>Deadline</label>
+            <input type="datetime-local" className="input" value={editTaskForm.deadline} onChange={e => setEditTaskForm({ ...editTaskForm, deadline: e.target.value })} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="input-group">
+              <label style={{ display: 'block', marginBottom: '8px' }}>Assignment Mode</label>
+              <CustomDropdown
+                value={editTaskForm.assignmentMode}
+                onChange={val => setEditTaskForm({ ...editTaskForm, assignmentMode: val })}
+                options={[
+                  { value: ASSIGNMENT_MODES.RANDOM, label: 'Randomly Assigned' },
+                  { value: ASSIGNMENT_MODES.MANUAL, label: 'Manually Assigned' }
+                ]}
+              />
+            </div>
+          </div>
+          <div className="input-group">
+            <label>Allowed Submission Types *</label>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {Object.values(SUBMISSION_TYPES).filter(t => t !== 'multichoice').map(type => (
+                <label key={type} style={{
+                  display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px',
+                  borderRadius: '8px', cursor: 'pointer',
+                  background: editTaskForm.submissionTypes.includes(type) ? 'var(--color-primary)' : 'rgba(255,255,255,0.05)',
+                  color: editTaskForm.submissionTypes.includes(type) ? '#fff' : 'var(--color-text-secondary)',
+                  border: `1px solid ${editTaskForm.submissionTypes.includes(type) ? 'var(--color-primary)' : 'rgba(255,255,255,0.1)'}`,
+                  transition: 'all 0.2s ease',
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={editTaskForm.submissionTypes.includes(type)}
+                    onChange={() => toggleEditSubmissionType(type)}
+                    style={{ display: 'none' }}
+                  />
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </label>
+              ))}
+            </div>
+          </div>
+          <button type="submit" className="btn btn-primary mt-4" disabled={!editTaskForm.title || editTaskForm.submissionTypes.length === 0}>
+            Update Task
+          </button>
+        </form>
+      </Modal>
+
+      {/* Link Warning Modal */}
+      <Modal isOpen={!!linkWarning} onClose={() => setLinkWarning(null)} title="⚠️ Link Mismatch Warning">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <p style={{ color: 'var(--color-text-secondary)', lineHeight: '1.6' }}>
+            {linkWarning?.message}
+          </p>
+          <div style={{
+            padding: '12px 16px', borderRadius: '8px',
+            background: 'rgba(255, 165, 2, 0.1)', border: '1px solid rgba(255, 165, 2, 0.3)',
+            color: '#ffa502', fontSize: '0.9rem'
+          }}>
+            You can bypass this check if you're sure the link is correct.
+          </div>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <button className="btn btn-ghost" onClick={() => setLinkWarning(null)}>
+              Cancel — Fix Link
+            </button>
+            <button
+              className="btn btn-secondary"
+              style={{ borderColor: '#ffa502', color: '#ffa502' }}
+              onClick={linkWarning?.onBypass}
+            >
+              Bypass & Save Anyway
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

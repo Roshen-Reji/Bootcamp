@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { loginUser, loginWithGoogle } from '@/lib/auth';
 import { GraduationCap, Mail, Lock } from 'lucide-react';
-import SocietyBackground from '@/components/backgrounds/SocietyBackground';
+import DarkVibesBackground from '@/components/backgrounds/DarkVibesBackground';
 import styles from './page.module.css';
 
 export default function StudentLoginPage() {
@@ -95,21 +95,9 @@ export default function StudentLoginPage() {
 
   return (
     <div className={styles.container}>
-      {/* Student Portal Default Background */}
-      <SocietyBackground society="student_branch" customColor="#4ECDC4" />
-      
-      <div className={styles.orbContainer}>
-        <motion.div
-          className={styles.orb}
-          style={{ background: 'radial-gradient(circle, rgba(78,205,196,0.15) 0%, transparent 70%)' }}
-          animate={{
-            x: [0, -100, 50, 0],
-            y: [0, 80, -60, 0],
-            scale: [1, 1.2, 0.9, 1],
-          }}
-          transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut' }}
-        />
-      </div>
+      {/* Dark Vibes Background as requested */}
+      <DarkVibesBackground />
+
 
       <motion.div
         className={styles.loginWrapper}

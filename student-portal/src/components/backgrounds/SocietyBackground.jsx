@@ -2,19 +2,19 @@
 
 import dynamic from 'next/dynamic';
 
-const CodeRain = dynamic(() => import('./CodeRain'), { ssr: false });
-const NodeNetwork = dynamic(() => import('./NodeNetwork'), { ssr: false });
-const AuroraBorealis = dynamic(() => import('./AuroraBorealis'), { ssr: false });
-const CircuitBoard = dynamic(() => import('./CircuitBoard'), { ssr: false });
-const BlueprintGrid = dynamic(() => import('./BlueprintGrid'), { ssr: false });
-const AntigravityDots = dynamic(() => import('./AntigravityDots'), { ssr: false });
+const ComputerSociety = dynamic(() => import('./ComputerSociety'), { ssr: false });
+const StudentBranch = dynamic(() => import('./StudentBranch'), { ssr: false });
+const WomenInEngineering = dynamic(() => import('./WomenInEngineering'), { ssr: false });
+const Robotics = dynamic(() => import('./Robotics'), { ssr: false });
+const IndustrialApplications = dynamic(() => import('./IndustrialApplications'), { ssr: false });
+const MultiSociety = dynamic(() => import('./MultiSociety'), { ssr: false });
 
 const BACKGROUND_MAP = {
-  code_rain: CodeRain,
-  node_network: NodeNetwork,
-  aurora: AuroraBorealis,
-  circuit_board: CircuitBoard,
-  blueprint_grid: BlueprintGrid,
+  code_rain: ComputerSociety,
+  node_network: StudentBranch,
+  aurora: WomenInEngineering,
+  circuit_board: Robotics,
+  blueprint_grid: IndustrialApplications,
 };
 
 const COLOR_MAP = {
@@ -38,7 +38,7 @@ export default function SocietyBackground({ society, customColor }) {
 
   // Render Antigravity effect for multiple societies
   if (Array.isArray(society) && society.length > 1) {
-    return <AntigravityDots color={customColor || '#6C63FF'} />;
+    return <MultiSociety color={customColor || '#6C63FF'} />;
   }
 
   // Handle single society

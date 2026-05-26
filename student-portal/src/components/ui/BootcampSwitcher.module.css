@@ -1,0 +1,138 @@
+.switcherContainer {
+  position: relative;
+  margin: 10px 15px;
+  margin-top: 5px;
+}
+
+.switcherBtn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+
+.switcherBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.switcherBtn.collapsed {
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.currentName {
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdown {
+  position: absolute;
+  bottom: 110%; /* Show above the button */
+  left: 0;
+  width: 200px;
+  background: #1a1a2e;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  padding: 8px 0;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  z-index: 100;
+}
+
+.dropdownCollapsed {
+  left: 110%; /* Show to the right if sidebar is collapsed */
+  bottom: 0;
+}
+
+.dropdownHeader {
+  padding: 4px 12px 8px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.5);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 4px;
+}
+
+.loading {
+  padding: 12px;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
+  text-align: center;
+}
+
+.bootcampList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.bootcampList::-webkit-scrollbar {
+  width: 4px;
+}
+
+.bootcampList::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.bootcampOption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.8);
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.bootcampOption:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.bcName {
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.activeOption {
+  color: #fff;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.activeDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #00e676; /* Or use a theme color */
+  box-shadow: 0 0 8px #00e676;
+}

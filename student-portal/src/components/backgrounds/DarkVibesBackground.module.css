@@ -1,0 +1,72 @@
+.container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  /* Darker radial gradient with more depth */
+  background: radial-gradient(circle at 30% 20%, #201338 0%, #11071e 40%, #06020a 80%, #000000 100%);
+  overflow: hidden;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.star {
+  position: absolute;
+  background-color: #ffffff;
+  border-radius: 50%;
+}
+
+.floatingElement {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.decorLines {
+  position: absolute;
+  bottom: 40px;
+  right: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  opacity: 0.5;
+}
+
+.line {
+  height: 1px;
+  background-color: #ffffff;
+}
+
+.scrollDown {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  opacity: 0.5;
+}
+
+.scrollText {
+  color: white;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transform: rotate(-90deg);
+  margin-bottom: 30px;
+}
+
+.scrollLine {
+  width: 1px;
+  height: 40px;
+  background-color: white;
+}

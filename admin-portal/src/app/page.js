@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { loginUser, loginWithGoogle } from '@/lib/auth';
 import { Zap, Mail, Lock } from 'lucide-react';
-import SocietyBackground from '@/components/backgrounds/SocietyBackground';
+import DarkVibesBackground from '@/components/backgrounds/DarkVibesBackground';
 import styles from './page.module.css';
 
 export default function LoginPage() {
@@ -111,30 +111,8 @@ export default function LoginPage() {
 
   return (
     <div className={styles.container}>
-      <SocietyBackground society="computer_society" />
-      
-      <div className={styles.orbContainer}>
-        <motion.div
-          className={styles.orb}
-          style={{ background: 'radial-gradient(circle, rgba(108,99,255,0.15) 0%, transparent 70%)' }}
-          animate={{
-            x: [0, 100, -50, 0],
-            y: [0, -80, 60, 0],
-            scale: [1, 1.2, 0.9, 1],
-          }}
-          transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut' }}
-        />
-        <motion.div
-          className={`${styles.orb} ${styles.orb2}`}
-          style={{ background: 'radial-gradient(circle, rgba(0,217,255,0.1) 0%, transparent 70%)' }}
-          animate={{
-            x: [0, -120, 80, 0],
-            y: [0, 60, -100, 0],
-            scale: [1, 0.8, 1.3, 1],
-          }}
-          transition={{ duration: 25, repeat: Infinity, ease: 'easeInOut' }}
-        />
-      </div>
+      <DarkVibesBackground />
+
 
       <motion.div
         className={styles.loginWrapper}

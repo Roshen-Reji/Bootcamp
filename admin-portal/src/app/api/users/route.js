@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+import * as admin from 'firebase-admin';
 import { authAdmin, dbAdmin } from '@/lib/firebaseAdmin';
+import { isRealEmailDomain } from '@/lib/emailValidator';
 
 export async function POST(request) {
   try {
@@ -8,6 +10,12 @@ export async function POST(request) {
 
     if (!email || !password || !role) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    // Validate email domain has real MX records
+    const emailCheck = await isRealEmailDomain(email);
+    if (!emailCheck.valid) {
+      return NextResponse.json({ error: emailCheck.message }, { status: 400 });
     }
 
     let userRecord;
@@ -43,8 +51,23 @@ export async function POST(request) {
     if (teamId) userData.teamId = teamId;
     if (level) userData.level = level;
 
+    const userDocRef = dbAdmin.collection('users').doc(uid);
+    const userDoc = await userDocRef.get();
+    let existingBootcampId = null;
+    if (userDoc.exists) {
+      existingBootcampId = userDoc.data().bootcampId;
+    }
+
     // Root users collection for auth routing
-    await dbAdmin.collection('users').doc(uid).set(userData, { merge: true });
+    const updatePayload = { ...userData };
+    if (bootcampId) {
+      const bootcampsToAdd = [bootcampId];
+      if (existingBootcampId && existingBootcampId !== bootcampId) {
+        bootcampsToAdd.push(existingBootcampId);
+      }
+      updatePayload.activeBootcamps = admin.firestore.FieldValue.arrayUnion(...bootcampsToAdd);
+    }
+    await userDocRef.set(updatePayload, { merge: true });
 
     // Specific bootcamp subcollections
     if (bootcampId) {
@@ -101,6 +124,15 @@ export async function DELETE(request) {
     } else if (role === 'student') {
       await dbAdmin.collection('bootcamps').doc(bootcampId).collection('students').doc(uid).delete();
       await dbAdmin.collection('bootcamps').doc(bootcampId).collection('leaderboard').doc(uid).delete();
+    }
+
+    // Remove from activeBootcamps
+    try {
+      await dbAdmin.collection('users').doc(uid).update({
+        activeBootcamps: admin.firestore.FieldValue.arrayRemove(bootcampId)
+      });
+    } catch (e) {
+      console.warn('Could not update activeBootcamps for user', uid, e.message);
     }
 
     return NextResponse.json({ success: true });
