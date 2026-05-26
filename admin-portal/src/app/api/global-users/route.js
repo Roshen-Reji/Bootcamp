@@ -67,6 +67,23 @@ export async function DELETE(request) {
       return NextResponse.json({ error: 'Missing uid' }, { status: 400 });
     }
 
+    // Clean up bootcamp subcollections first
+    const userDoc = await dbAdmin.collection('users').doc(uid).get();
+    if (userDoc.exists) {
+      const userData = userDoc.data();
+      const bootcamps = userData.activeBootcamps || (userData.bootcampId ? [userData.bootcampId] : []);
+      const role = userData.role;
+
+      for (const bcId of bootcamps) {
+        if (role === 'volunteer') {
+          await dbAdmin.collection('bootcamps').doc(bcId).collection('volunteers').doc(uid).delete().catch(() => {});
+        } else if (role === 'student') {
+          await dbAdmin.collection('bootcamps').doc(bcId).collection('students').doc(uid).delete().catch(() => {});
+          await dbAdmin.collection('bootcamps').doc(bcId).collection('leaderboard').doc(uid).delete().catch(() => {});
+        }
+      }
+    }
+
     // Delete from Firestore
     await dbAdmin.collection('users').doc(uid).delete();
     
@@ -89,7 +106,42 @@ export async function PUT(request) {
       return NextResponse.json({ error: 'Missing uid or password' }, { status: 400 });
     }
 
+    if (password.length < 6) {
+      return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
+    }
+
     const { authAdmin } = await import('@/lib/firebaseAdmin');
+
+    // Get user's email to check password reuse
+    const userRecord = await authAdmin.getUser(uid);
+    
+    // Check if new password matches current via Firebase REST API sign-in
+    const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+    if (apiKey) {
+      try {
+        const signInRes = await fetch(
+          `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: userRecord.email,
+              password: password,
+              returnSecureToken: false,
+            }),
+          }
+        );
+        if (signInRes.ok) {
+          return NextResponse.json(
+            { error: 'New password must be different from the current password.' },
+            { status: 400 }
+          );
+        }
+      } catch (err) {
+        console.warn('Password reuse check failed, proceeding:', err.message);
+      }
+    }
+
     await authAdmin.updateUser(uid, { password });
 
     return NextResponse.json({ success: true });
@@ -98,3 +150,4 @@ export async function PUT(request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+

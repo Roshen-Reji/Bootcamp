@@ -41,6 +41,14 @@ export async function getBootcamp(bootcampId) {
   return { id: docSnap.id, ...docSnap.data() };
 }
 
+export async function getBootcampsByIds(bootcampIds) {
+  if (!bootcampIds || bootcampIds.length === 0) return [];
+  // Use Promise.all to fetch multiple bootcamps (avoids 10-item limit of 'in' queries)
+  const promises = bootcampIds.map(id => getDoc(doc(db, 'bootcamps', id)));
+  const snaps = await Promise.all(promises);
+  return snaps.filter(snap => snap.exists()).map(snap => ({ id: snap.id, ...snap.data() }));
+}
+
 export async function getAllBootcamps() {
   const snap = await getDocs(query(collection(db, 'bootcamps'), orderBy('createdAt', 'desc')));
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -223,16 +231,15 @@ export async function getTasks(bootcampId) {
   const snap = await getDocs(
     query(
       collection(db, 'bootcamps', bootcampId, 'tasks'),
-      where('status', '==', 'active'),
       orderBy('createdAt', 'desc')
     )
   );
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  return tasks.filter(t => t.status === 'active');
 }
 
 export async function getPaginatedTasks(bootcampId, pageSize = 10, lastVisible = null) {
   let constraints = [
-    where('status', '==', 'active'),
     orderBy('createdAt', 'desc')
   ];
   if (lastVisible) constraints.push(startAfter(lastVisible));
@@ -242,8 +249,9 @@ export async function getPaginatedTasks(bootcampId, pageSize = 10, lastVisible =
     query(collection(db, 'bootcamps', bootcampId, 'tasks'), ...constraints)
   );
   
+  const tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   return {
-    data: snap.docs.map(d => ({ id: d.id, ...d.data() })),
+    data: tasks.filter(t => t.status === 'active'),
     lastVisible: snap.docs[snap.docs.length - 1] || null
   };
 }
@@ -383,20 +391,18 @@ export async function getSubmissions(bootcampId, filters = {}) {
   let q = collection(db, 'bootcamps', bootcampId, 'submissions');
   const constraints = [orderBy('submittedAt', 'desc')];
 
-  if (filters.taskId) constraints.unshift(where('taskId', '==', filters.taskId));
-  if (filters.studentId) constraints.unshift(where('studentId', '==', filters.studentId));
-  if (filters.status) constraints.unshift(where('status', '==', filters.status));
-
   const snap = await getDocs(query(q, ...constraints));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  let submissions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  if (filters.taskId) submissions = submissions.filter(s => s.taskId === filters.taskId);
+  if (filters.studentId) submissions = submissions.filter(s => s.studentId === filters.studentId);
+  if (filters.status) submissions = submissions.filter(s => s.status === filters.status);
+
+  return submissions;
 }
 
 export async function getPaginatedSubmissions(bootcampId, filters = {}, pageSize = 10, lastVisible = null) {
   const constraints = [orderBy('submittedAt', 'desc')];
-
-  if (filters.taskId) constraints.unshift(where('taskId', '==', filters.taskId));
-  if (filters.studentId) constraints.unshift(where('studentId', '==', filters.studentId));
-  if (filters.status) constraints.unshift(where('status', '==', filters.status));
 
   if (lastVisible) constraints.push(startAfter(lastVisible));
   constraints.push(limit(pageSize));
@@ -405,8 +411,14 @@ export async function getPaginatedSubmissions(bootcampId, filters = {}, pageSize
     query(collection(db, 'bootcamps', bootcampId, 'submissions'), ...constraints)
   );
   
+  let submissions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  
+  if (filters.taskId) submissions = submissions.filter(s => s.taskId === filters.taskId);
+  if (filters.studentId) submissions = submissions.filter(s => s.studentId === filters.studentId);
+  if (filters.status) submissions = submissions.filter(s => s.status === filters.status);
+
   return {
-    data: snap.docs.map(d => ({ id: d.id, ...d.data() })),
+    data: submissions,
     lastVisible: snap.docs[snap.docs.length - 1] || null
   };
 }
@@ -414,13 +426,17 @@ export async function getPaginatedSubmissions(bootcampId, filters = {}, pageSize
 export function subscribeToSubmissions(bootcampId, callback, filters = {}) {
   let constraints = [orderBy('submittedAt', 'desc')];
 
-  if (filters.taskId) constraints.unshift(where('taskId', '==', filters.taskId));
-  if (filters.studentId) constraints.unshift(where('studentId', '==', filters.studentId));
-  if (filters.status) constraints.unshift(where('status', '==', filters.status));
-
   return onSnapshot(
     query(collection(db, 'bootcamps', bootcampId, 'submissions'), ...constraints),
-    (snap) => callback(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    (snap) => {
+      let submissions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      
+      if (filters.taskId) submissions = submissions.filter(s => s.taskId === filters.taskId);
+      if (filters.studentId) submissions = submissions.filter(s => s.studentId === filters.studentId);
+      if (filters.status) submissions = submissions.filter(s => s.status === filters.status);
+      
+      callback(submissions);
+    }
   );
 }
 
