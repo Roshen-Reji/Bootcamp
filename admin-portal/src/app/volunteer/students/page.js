@@ -13,7 +13,7 @@ import styles from '../page.module.css';
 export default function VolunteerStudents() {
   const { user } = useAuth();
   const [bootcamp, setBootcamp] = useState(null);
-  const [students, setStudents] = useState([]);
+  const [studentsList, setStudentsList] = useState([]);
   const [teams, setTeams] = useState([]);
 
   // Modal & Form State
@@ -48,11 +48,7 @@ export default function VolunteerStudents() {
     };
     loadBc();
 
-    const unsubStudents = subscribeToStudents(user.bootcampId, (allStudents) => {
-      // Only show students assigned to this volunteer
-      setStudents(allStudents.filter(s => s.volunteerId === user.uid));
-    });
-
+    const unsubStudents = subscribeToStudents(user.bootcampId, setStudentsList);
     const unsubTeams = subscribeToTeams(user.bootcampId, setTeams);
 
     return () => {
@@ -60,6 +56,12 @@ export default function VolunteerStudents() {
       unsubTeams();
     };
   }, [user]);
+
+  const isTeamBased = bootcamp?.teamConfig?.enabled;
+  const myTeamIds = isTeamBased ? teams.filter(t => t.volunteerId === user.uid).map(t => t.id) : [];
+  const students = isTeamBased 
+    ? studentsList.filter(s => myTeamIds.includes(s.teamId))
+    : studentsList.filter(s => s.volunteerId === user.uid);
 
   const handleCreateStudent = async (e) => {
     e.preventDefault();

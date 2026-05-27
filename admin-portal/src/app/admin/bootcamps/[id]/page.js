@@ -186,7 +186,11 @@ export default function BootcampDetailPage() {
 
         {/* Tabs */}
         <div className={styles.tabs}>
-          {TABS.map((tab) => (
+          {(bootcamp.teamConfig?.enabled ? [
+            ...TABS.slice(0, 4),
+            { id: 'teams', label: 'Teams', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
+            ...TABS.slice(4)
+          ] : TABS).map((tab) => (
             <button
               key={tab.id}
               className={`${styles.tab} ${activeTab === tab.id ? styles.tabActive : ''}`}
@@ -194,6 +198,7 @@ export default function BootcampDetailPage() {
                 if (tab.id === 'tasks') router.push(`/admin/bootcamps/${id}/tasks`);
                 else if (tab.id === 'volunteers') router.push(`/admin/bootcamps/${id}/volunteers`);
                 else if (tab.id === 'students') router.push(`/admin/bootcamps/${id}/students`);
+                else if (tab.id === 'teams') router.push(`/admin/bootcamps/${id}/teams`);
                 else if (tab.id === 'submissions') router.push(`/admin/bootcamps/${id}/submissions`);
                 else if (tab.id === 'leaderboard') router.push(`/admin/bootcamps/${id}/leaderboard`);
                 else setActiveTab(tab.id);

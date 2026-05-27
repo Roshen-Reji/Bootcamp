@@ -86,6 +86,12 @@ export async function getVolunteers(bootcampId) {
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 }
 
+export async function getVolunteer(bootcampId, volunteerId) {
+  const docSnap = await getDoc(doc(db, 'bootcamps', bootcampId, 'volunteers', volunteerId));
+  if (!docSnap.exists()) return null;
+  return { id: docSnap.id, ...docSnap.data() };
+}
+
 export function subscribeToVolunteers(bootcampId, callback) {
   return onSnapshot(
     query(collection(db, 'bootcamps', bootcampId, 'volunteers'), orderBy('createdAt', 'desc')),
@@ -206,6 +212,12 @@ export async function getTeams(bootcampId) {
     query(collection(db, 'bootcamps', bootcampId, 'teams'), orderBy('name'))
   );
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+export async function getTeam(bootcampId, teamId) {
+  const docSnap = await getDoc(doc(db, 'bootcamps', bootcampId, 'teams', teamId));
+  if (!docSnap.exists()) return null;
+  return { id: docSnap.id, ...docSnap.data() };
 }
 
 export function subscribeToTeams(bootcampId, callback) {

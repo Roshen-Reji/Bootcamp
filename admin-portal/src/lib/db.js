@@ -190,6 +190,7 @@ export async function createTeam(bootcampId, data) {
   const docRef = await addDoc(collection(db, 'bootcamps', bootcampId, 'teams'), {
     ...data,
     totalPoints: 0,
+    volunteerId: '',
     createdAt: serverTimestamp(),
   });
   return docRef.id;

@@ -422,15 +422,19 @@ export default function StudentsPage() {
                     </td>
                     <td>
                       <div style={{ width: '160px' }}>
-                        <CustomDropdown
-                          small={true}
-                          value={student.volunteerId || ''}
-                          onChange={(val) => handleVolunteerUpdate(student.uid || student.id, val)}
-                          options={[
-                            { value: '', label: 'Unassigned' },
-                            ...volunteers.map(v => ({ value: v.id, label: v.displayName }))
-                          ]}
-                        />
+                        {bootcamp.teamConfig?.enabled ? (
+                          <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)', fontStyle: 'italic' }}>Managed by Team</span>
+                        ) : (
+                          <CustomDropdown
+                            small={true}
+                            value={student.volunteerId || ''}
+                            onChange={(val) => handleVolunteerUpdate(student.uid || student.id, val)}
+                            options={[
+                              { value: '', label: 'Unassigned' },
+                              ...volunteers.map(v => ({ value: v.id, label: v.displayName }))
+                            ]}
+                          />
+                        )}
                       </div>
                     </td>
                     {bootcamp.teamConfig?.enabled && (
@@ -517,17 +521,19 @@ export default function StudentsPage() {
             />
           </div>
 
-          <div className="input-group">
-            <label style={{ display: 'block', marginBottom: '8px' }}>Assign Volunteer</label>
-            <CustomDropdown
-              value={form.volunteerId}
-              onChange={(val) => setForm({ ...form, volunteerId: val })}
-              options={[
-                { value: '', label: '-- Unassigned --' },
-                ...volunteers.map(v => ({ value: v.id, label: v.displayName }))
-              ]}
-            />
-          </div>
+          {!bootcamp.teamConfig?.enabled && (
+            <div className="input-group">
+              <label style={{ display: 'block', marginBottom: '8px' }}>Assign Volunteer</label>
+              <CustomDropdown
+                value={form.volunteerId}
+                onChange={(val) => setForm({ ...form, volunteerId: val })}
+                options={[
+                  { value: '', label: '-- Unassigned --' },
+                  ...volunteers.map(v => ({ value: v.id, label: v.displayName }))
+                ]}
+              />
+            </div>
+          )}
 
           {bootcamp.teamConfig?.enabled && (
             <div className="input-group">
