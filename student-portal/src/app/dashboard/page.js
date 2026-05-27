@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
-import { getBootcamp, subscribeToTasks, subscribeToSubmissions, subscribeToStudent } from '@/lib/db';
+import { getBootcamp, subscribeToTasks, subscribeToSubmissions, subscribeToStudent, getVolunteer, getTeam } from '@/lib/db';
 import SocietyBackground from '@/components/backgrounds/SocietyBackground';
 import GlassCard from '@/components/ui/GlassCard';
 import { getSocieties } from '@/shared/societies';
@@ -18,6 +18,7 @@ export default function StudentDashboard() {
   const [tasks, setTasks] = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [studentProfile, setStudentProfile] = useState(null);
+  const [volunteer, setVolunteer] = useState(null);
 
   useEffect(() => {
     if (!user?.bootcampId) return;
@@ -51,6 +52,29 @@ export default function StudentDashboard() {
     };
   }, [user, refreshUser]);
 
+  useEffect(() => {
+    if (!studentProfile || !user?.bootcampId) return;
+
+    const fetchVolunteer = async () => {
+      try {
+        let volId = studentProfile.volunteerId;
+        if (studentProfile.teamId) {
+          const team = await getTeam(user.bootcampId, studentProfile.teamId);
+          if (team?.volunteerId) volId = team.volunteerId;
+        }
+
+        if (volId) {
+          const vol = await getVolunteer(user.bootcampId, volId);
+          if (vol) setVolunteer(vol);
+        }
+      } catch (err) {
+        console.error('Failed to fetch volunteer', err);
+      }
+    };
+
+    fetchVolunteer();
+  }, [studentProfile, user?.bootcampId]);
+
   if (!bootcamp) return null;
   const societies = getSocieties(bootcamp.society);
 
@@ -78,6 +102,11 @@ export default function StudentDashboard() {
         <div>
           <h1 className={styles.title}>Hello, {user?.displayName}</h1>
           <p className={styles.subtitle}>Welcome to {bootcamp.name}</p>
+          {volunteer && (
+            <p className={styles.subtitle} style={{ fontSize: '0.9rem', marginTop: '4px', opacity: 0.8 }}>
+              Assigned Volunteer: <strong>{volunteer.displayName || volunteer.name}</strong>
+            </p>
+          )}
           {societies.length > 0 && (
             <div className={styles.societyChips} aria-label="Bootcamp societies">
               {societies.map((society) => (

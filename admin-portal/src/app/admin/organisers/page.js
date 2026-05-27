@@ -16,6 +16,11 @@ export default function OrganisersPage() {
   const [formLoading, setFormLoading] = useState(false);
   const [form, setForm] = useState({ displayName: '', email: '', password: '' });
 
+  const [isEditOrganiserOpen, setEditOrganiserOpen] = useState(false);
+  const [selectedOrganiserForEdit, setSelectedOrganiserForEdit] = useState(null);
+  const [editForm, setEditForm] = useState({ displayName: '', email: '' });
+  const [isEditingOrganiser, setIsEditingOrganiser] = useState(false);
+
   const fetchOrganisers = async () => {
     try {
       setLoading(true);
@@ -64,6 +69,40 @@ export default function OrganisersPage() {
     } finally {
       setFormLoading(false);
     }
+  };
+
+  const handleEditOrganiser = async (e) => {
+    e.preventDefault();
+    if (!selectedOrganiserForEdit) return;
+
+    setIsEditingOrganiser(true);
+    try {
+      const res = await fetch('/api/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          uid: selectedOrganiserForEdit.uid,
+          displayName: editForm.displayName,
+          email: editForm.email
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update user');
+
+      setOrganisers(organisers.map(o => o.uid === selectedOrganiserForEdit.uid ? { ...o, displayName: editForm.displayName, email: editForm.email } : o));
+      setEditOrganiserOpen(false);
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setIsEditingOrganiser(false);
+    }
+  };
+
+  const openEditModal = (org) => {
+    setSelectedOrganiserForEdit(org);
+    setEditForm({ displayName: org.displayName, email: org.email });
+    setEditOrganiserOpen(true);
   };
 
   const handleDelete = async (uid, name) => {
@@ -163,6 +202,14 @@ export default function OrganisersPage() {
                     <button 
                       className="btn btn-ghost btn-sm" 
                       style={{ padding: '6px' }}
+                      onClick={() => openEditModal(org)}
+                      title="Edit Organiser"
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                    </button>
+                    <button 
+                      className="btn btn-ghost btn-sm" 
+                      style={{ padding: '6px' }}
                       onClick={() => {
                         setSelectedOrganiserId(org.uid);
                         setEditPasswordOpen(true);
@@ -242,6 +289,33 @@ export default function OrganisersPage() {
           </div>
           <button type="submit" className="btn btn-primary w-full" style={{ marginTop: '16px' }} disabled={formLoading}>
             {formLoading ? 'Updating...' : 'Update Password'}
+          </button>
+        </form>
+      </Modal>
+
+      <Modal isOpen={isEditOrganiserOpen} onClose={() => setEditOrganiserOpen(false)} title={`Edit Organiser: ${selectedOrganiserForEdit?.displayName}`}>
+        <form onSubmit={handleEditOrganiser} style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
+          <div className="input-group">
+            <label>Display Name</label>
+            <input 
+              required
+              className="input" 
+              value={editForm.displayName} 
+              onChange={e => setEditForm({...editForm, displayName: e.target.value})} 
+            />
+          </div>
+          <div className="input-group">
+            <label>Email Address</label>
+            <input 
+              required
+              type="email"
+              className="input" 
+              value={editForm.email} 
+              onChange={e => setEditForm({...editForm, email: e.target.value})} 
+            />
+          </div>
+          <button type="submit" className="btn btn-primary w-full" style={{ marginTop: '16px' }} disabled={isEditingOrganiser}>
+            {isEditingOrganiser ? 'Saving...' : 'Save Changes'}
           </button>
         </form>
       </Modal>

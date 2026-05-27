@@ -69,8 +69,10 @@ export default function CustomDropdown({ value, options, onChange, small = false
                             borderRadius: '12px',
                             overflow: 'hidden',
                             boxShadow: '0 16px 40px -8px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
-                            maxHeight: '250px',
-                            overflowY: 'auto'
+                            maxHeight: '40vh',
+                            overflowY: 'auto',
+                            overscrollBehavior: 'contain',
+                            WebkitOverflowScrolling: 'touch'
                         }}
                     >
                         {options.map((opt) => (

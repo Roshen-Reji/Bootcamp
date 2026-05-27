@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
-import { getBootcamp, subscribeToSubmissions, subscribeToStudents, subscribeToTasks } from '@/lib/db';
+import { getBootcamp, subscribeToSubmissions, subscribeToStudents, subscribeToTasks, subscribeToTeams } from '@/lib/db';
 import GlassCard from '@/components/ui/GlassCard';
 import SocietyBackground from '@/components/backgrounds/SocietyBackground';
 import styles from './page.module.css';
@@ -18,7 +18,8 @@ const ClockIcon = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="no
 export default function VolunteerDashboard() {
   const { user } = useAuth();
   const [bootcamp, setBootcamp] = useState(null);
-  const [students, setStudents] = useState([]);
+  const [allStudents, setAllStudents] = useState([]);
+  const [teams, setTeams] = useState([]);
   const [submissions, setSubmissions] = useState([]);
   const [tasks, setTasks] = useState([]);
 
@@ -31,10 +32,8 @@ export default function VolunteerDashboard() {
     };
     loadBc();
 
-    const unsubStudents = subscribeToStudents(user.bootcampId, (allStudents) => {
-      // Filter for students assigned to this volunteer
-      setStudents(allStudents.filter(s => s.volunteerId === user.uid));
-    });
+    const unsubStudents = subscribeToStudents(user.bootcampId, setAllStudents);
+    const unsubTeams = subscribeToTeams(user.bootcampId, setTeams);
 
     const unsubSubs = subscribeToSubmissions(user.bootcampId, (allSubs) => {
       setSubmissions(allSubs);
@@ -44,10 +43,17 @@ export default function VolunteerDashboard() {
 
     return () => {
       unsubStudents();
+      unsubTeams();
       unsubSubs();
       unsubTasks();
     };
   }, [user]);
+
+  const isTeamBased = bootcamp?.teamConfig?.enabled;
+  const myTeamIds = isTeamBased ? teams.filter(t => t.volunteerId === user.uid).map(t => t.id) : [];
+  const students = isTeamBased 
+    ? allStudents.filter(s => myTeamIds.includes(s.teamId))
+    : allStudents.filter(s => s.volunteerId === user.uid);
 
   // Create mapping dictionaries for fast lookup
   const studentMap = {};

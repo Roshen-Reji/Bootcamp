@@ -111,12 +111,6 @@ export default function DarkVibesBackground() {
         <div className={styles.line} style={{ width: '30px' }} />
         <div className={styles.line} style={{ width: '50px' }} />
       </div>
-      
-      {/* Scroll down text */}
-      <div className={styles.scrollDown}>
-        <div className={styles.scrollText}>Scroll down</div>
-        <div className={styles.scrollLine} />
-      </div>
     </div>
   );
 }

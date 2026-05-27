@@ -19,6 +19,11 @@ export default function GlobalStudentsPage() {
   const [newPassword, setNewPassword] = useState('');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
 
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedUserForEdit, setSelectedUserForEdit] = useState(null);
+  const [editForm, setEditForm] = useState({ displayName: '', email: '' });
+  const [isEditingUser, setIsEditingUser] = useState(false);
+
   const { user } = useAuth();
 
   useEffect(() => {
@@ -99,7 +104,7 @@ export default function GlobalStudentsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           uid: selectedUserForPassword.uid,
-          newPassword: newPassword
+          password: newPassword
         })
       });
 
@@ -116,10 +121,44 @@ export default function GlobalStudentsPage() {
     }
   };
 
+  const handleEditUser = async (e) => {
+    e.preventDefault();
+    if (!selectedUserForEdit) return;
+
+    setIsEditingUser(true);
+    try {
+      const res = await fetch('/api/users', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          uid: selectedUserForEdit.uid,
+          displayName: editForm.displayName,
+          email: editForm.email
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update user');
+
+      setStudents(students.map(s => s.uid === selectedUserForEdit.uid ? { ...s, displayName: editForm.displayName, email: editForm.email } : s));
+      setEditModalOpen(false);
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setIsEditingUser(false);
+    }
+  };
+
   const openPasswordModal = (user) => {
     setSelectedUserForPassword(user);
     setNewPassword('');
     setPasswordModalOpen(true);
+  };
+
+  const openEditModal = (user) => {
+    setSelectedUserForEdit(user);
+    setEditForm({ displayName: user.displayName, email: user.email });
+    setEditModalOpen(true);
   };
 
   const bootcampOptions = bootcamps.map(bc => ({
@@ -203,6 +242,14 @@ export default function GlobalStudentsPage() {
                       <td>
                         <div style={{ display: 'flex', gap: '8px' }}>
                           <button
+                            onClick={() => openEditModal(student)}
+                            className="btn btn-secondary btn-sm"
+                            style={{ padding: '6px 12px' }}
+                            title="Edit Student"
+                          >
+                            Edit
+                          </button>
+                          <button
                             onClick={() => openPasswordModal(student)}
                             className="btn btn-secondary btn-sm"
                             style={{ padding: '6px 12px' }}
@@ -248,6 +295,37 @@ export default function GlobalStudentsPage() {
           </div>
           <button type="submit" className="btn btn-primary mt-4" disabled={isChangingPassword}>
             {isChangingPassword ? 'Updating...' : 'Update Password'}
+          </button>
+        </form>
+      </Modal>
+
+      <Modal
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        title={`Edit Student: ${selectedUserForEdit?.displayName}`}
+      >
+        <form onSubmit={handleEditUser} className="flex-col gap-md">
+          <div className="input-group">
+            <label>Display Name</label>
+            <input
+              required
+              className="input"
+              value={editForm.displayName}
+              onChange={e => setEditForm({ ...editForm, displayName: e.target.value })}
+            />
+          </div>
+          <div className="input-group">
+            <label>Email Address</label>
+            <input
+              required
+              type="email"
+              className="input"
+              value={editForm.email}
+              onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+            />
+          </div>
+          <button type="submit" className="btn btn-primary mt-4" disabled={isEditingUser}>
+            {isEditingUser ? 'Saving...' : 'Save Changes'}
           </button>
         </form>
       </Modal>

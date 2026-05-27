@@ -25,7 +25,7 @@ export default function VolunteerSidebar() {
   const [isExpanded, setIsExpanded] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, bootcamp, logout } = useAuth();
 
   const handleNav = (path) => {
     router.push(path);
@@ -35,6 +35,11 @@ export default function VolunteerSidebar() {
     if (path === '/volunteer') return pathname === '/volunteer';
     return pathname.startsWith(path);
   };
+
+  const dynamicNavItems = [...NAV_ITEMS];
+  if (bootcamp?.teamConfig?.enabled) {
+    dynamicNavItems.splice(2, 0, { id: 'teams', label: 'My Teams', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, path: '/volunteer/teams' });
+  }
 
   return (
     <>
@@ -66,7 +71,7 @@ export default function VolunteerSidebar() {
         <BootcampSwitcher isExpanded={isExpanded} />
 
         <nav className={styles.nav}>
-          {NAV_ITEMS.map((item) => (
+          {dynamicNavItems.map((item) => (
             <motion.button
               key={item.id}
               className={`${styles.navItem} ${isActive(item.path) ? styles.active : ''}`}
@@ -128,7 +133,7 @@ export default function VolunteerSidebar() {
       </motion.aside>
 
       <nav className={styles.mobileNav}>
-        {NAV_ITEMS.map((item) => (
+        {dynamicNavItems.map((item) => (
           <button
             key={item.id}
             className={`${styles.mobileNavItem} ${isActive(item.path) ? styles.mobileActive : ''}`}
